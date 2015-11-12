@@ -32,14 +32,11 @@ int sys_time_seconds ;
 // CE -> RPB6 (I/O) (pin 15)
 
 
-//char reg_read[5]; // register used for reading a single register
-//char payload_read[32]; // register used for reading payload (find length of payload using R_RX_PL_WID)
 static char status;
 static char buffer[120];
 char rf_spiwrite(unsigned char c){ // Transfer to SPI
     while (TxBufFullSPI2());
     WriteSPI2(c);
-    //while (SPI2STATbits.SPIBUSY); // wait for it to end of transaction
     while( !SPI2STATbits.SPIRBF); // check for complete transmit
     return SPI2BUF;
 }
@@ -64,35 +61,80 @@ void nrf_read_reg(char reg, char * buff, int len){
     int i = 0;
     _csn = 0; // begin transmission
     status = rf_spiwrite(nrf24l01_R_REGISTER | reg); // send command to read register
-    //status = ReadSPI2(); // get status register back when sending command
-    //status = SPI2BUF;
     
     for(i=0;i<len;i++){
         buff[i] = rf_spiwrite(nrf24l01_SEND_CLOCK); // send clock pulse to continue receiving data
         //buff[i] = (char)ReadSPI2(); // get the data from the register starting with LSB
     }
     _csn = 1; // end transmission
-  
 }
 
-//char* nrf_read_payload(char reg){
-//    int i = 0;
-//    char * width = malloc(5); // width of payload to read in first char
-//    nrf_read_reg(nrf24l01_R_REGISTER_WID, width, 1); // get the size of the payload
-//    
-//    _csn = 0; // begin transmission
-//    // send command to read payload register NOTE: payload deleted after reading
-//    rf_spiwrite(nrf24l01_R_RX_PAYLOAD);
-//    status = (char *)ReadSPI2(); // get back status register when sending command
-//    for(i=0;i<width[i];i++){
-//        rf_spiwrite(nrf24l01_SEND_CLOCK); // send a clock pulse while reading
-//        payload_read[i] = ReadSPI2(); // get byte of payload LSB first
-//    }
-//    free(width);
-//    _csn = 1; // end transmission
-//    
-//    return payload_read; // return array containing payload
-//}
+
+// writes data to a register
+// data: array of chars to be written (1-5 bytes)
+// len: amount of chars/bytes to be written
+// NOTE: can only be used in power down or standby mode
+// NOTE: use separate function for writing address or payload
+void nrf_write_reg(char reg, char data){
+    _csn = 0; // begin transmission
+    status = rf_spiwrite(nrf24l01_W_REGISTER | reg); // send the command to write reg
+    rf_spiwrite(data);
+    _csn = 1; // end transmission
+}
+
+
+// sets address of a pipe
+// pipe: RX pipe address should be set for (6 for TX pipe)
+// data: address to be written to pipe (LSB first in array)
+// len: amount of bytes to be written as address
+// NOTE: RX pipes 0 and 1 and TX pipe accept 5 bytes, the rest accept 1 byte
+// NOTE: for pipes 2-5 only writes to LSB
+// NOTE: can only be used in power down or standby mode
+// NOT TESTED YET
+void nrf_write_address(char pipe, char * address, char len){
+    int i = 0;
+    char reg;  // register of pipe
+    reg = nrf24l01_RX_ADDR_P0 + pipe;
+    
+    _csn = 0; // begin transmission
+    status = rf_spiwrite(nrf24l01_W_REGISTER | reg); // send command to write reg
+    for(i=0;i<len;i++){
+        rf_spiwrite(address[i]); // write each char/byte to address reg
+    }
+    _csn = 1; // end transmission
+}
+
+
+// Write a payload to be sent over the radio
+// data: array of chars to be sent (1-32 chars/bytes)
+// len: amount of chars in array/bytes to be sent
+// NOT TESTED YET
+void nrf_write_payload(char * data, char len){
+    int i = 0;
+    
+    _csn = 0; // begin transmission
+    status = rf_spiwrite(nrf24l01_W_TX_PAYLOAD); // send the command to write the payload
+    for(i=0;i<len;i++){
+    rf_spiwrite(data[i]); // write each char/byte to tx payload one at a time
+    }
+    _csn = 0; // end transmission
+    
+}
+
+// should read the payload into a buffer NOT TESTED YET
+void nrf_read_payload(char reg, char * buff){
+    int i = 0;
+    char * width = malloc(1); // width of payload to read in first char
+    nrf_read_reg(nrf24l01_R_REGISTER_WID, width, 1); // get the size of the payload
+    
+    _csn = 0; // begin transmission
+    status = rf_spiwrite(nrf24l01_R_REGISTER | reg); // send command to read payload
+    for(i=0;i<width[0];i++){
+        buff[i] = rf_spiwrite(nrf24l01_SEND_CLOCK);
+    }
+    _csn = 1; // end transmission
+    free(width);
+}
 
 int main(void){
 char * config = malloc(1); // will take value in config register   
@@ -108,13 +150,7 @@ TRIS_ce = 0;
  //240x320 vertical display
  tft_setRotation(0); // Use tft_setRotation(1) for 320x240
  
-_csn = 0;
-rf_spiwrite(nrf24l01_W_REGISTER | nrf24l01_CONFIG);
-
-rf_spiwrite(nrf24l01_CONFIG_PRIM_RX | nrf24l01_CONFIG_PWR_UP | nrf24l01_CONFIG_CRCO);
-
-_csn = 1;
-
+ nrf_write_reg(nrf24l01_CONFIG, nrf24l01_CONFIG_PRIM_RX | nrf24l01_CONFIG_PWR_UP | nrf24l01_CONFIG_CRCO | nrf24l01_CONFIG_EN_CRC);
 while(1){
     // turn on power and set some random bit on config reg as a test testing
   
@@ -154,16 +190,4 @@ while(1){
     delay_ms(100);
 
 }
-//
-//delay_ms(1);
-//    while(1){
-//        _csn = 0;
-//        rf_spiwrite(nrf24l01_R_REGISTER | nrf24l01_CONFIG);
-//        rf_spiwrite(nrf24l01_SEND_CLOCK);
-//        _csn = 1;
-//        delay_ms(1);
-//    }
-
-
-
 } // main
