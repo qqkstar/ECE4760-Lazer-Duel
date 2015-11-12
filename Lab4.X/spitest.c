@@ -34,11 +34,12 @@ int sys_time_seconds ;
 
 static char status;
 static char buffer[120];
+
 char rf_spiwrite(unsigned char c){ // Transfer to SPI
     while (TxBufFullSPI2());
     WriteSPI2(c);
     while( !SPI2STATbits.SPIRBF); // check for complete transmit
-    return SPI2BUF;
+    return ReadSPI2();
 }
 
 void init_SPI(){
@@ -70,17 +71,17 @@ void nrf_read_reg(char reg, char * buff, int len){
 }
 
 
-// writes data to a register
-// data: array of chars to be written (1-5 bytes)
-// len: amount of chars/bytes to be written
-// NOTE: can only be used in power down or standby mode
-// NOTE: writing address or payload done with specific command
-void nrf_write_reg(char reg, char data){
-    _csn = 0; // begin transmission
-    status = rf_spiwrite(nrf24l01_W_REGISTER | reg); // send the command to write reg
-    rf_spiwrite(data);
-    _csn = 1; // end transmission
-}
+//// writes data to a register
+//// data: array of chars to be written (1-5 bytes)
+//// len: amount of chars/bytes to be written
+//// NOTE: can only be used in power down or standby mode
+//// NOTE: writing address or payload done with specific command
+//void nrf_write_reg(char reg, char data){
+//    _csn = 0; // begin transmission
+//    status = rf_spiwrite(nrf24l01_W_REGISTER | reg); // send the command to write reg
+//    rf_spiwrite(data);
+//    _csn = 1; // end transmission
+//}
 
 
 // sets address of a pipe
@@ -91,15 +92,12 @@ void nrf_write_reg(char reg, char data){
 // NOTE: for pipes 2-5 only writes to LSB
 // NOTE: can only be used in power down or standby mode
 // NOT TESTED YET currently returns negative of what it should I think
-void nrf_write_address(char pipe, char * address, char len){
+void nrf_write_reg(char reg, char * data, char len){
     int i = 0;
-    char reg;  // register of pipe
-    reg = nrf24l01_RX_ADDR_P0 + pipe;
-    
     _csn = 0; // begin transmission
     status = rf_spiwrite(nrf24l01_W_REGISTER | reg); // send command to write reg
     for(i=0;i<len;i++){
-        rf_spiwrite(address[i]); // write each char/byte to address reg
+        rf_spiwrite(data[i]); // write each char/byte to address reg
     }
     _csn = 1; // end transmission
 }
@@ -115,9 +113,9 @@ void nrf_write_payload(char * data, char len){
     _csn = 0; // begin transmission
     status = rf_spiwrite(nrf24l01_W_TX_PAYLOAD); // send the command to write the payload
     for(i=0;i<len;i++){
-    rf_spiwrite(data[i]); // write each char/byte to tx payload one at a time
+        rf_spiwrite(data[i]); // write each char/byte to tx payload one at a time
     }
-    _csn = 0; // end transmission
+    _csn = 1; // end transmission
     
 }
 
@@ -138,13 +136,13 @@ void nrf_read_payload(char reg, char * buff){
 
 int main(void){
 char * config = malloc(1); // will take value in config register   
-char address[5]; // 5 byte address for testing
-char address_read[5]; // data read from the address
-int address_data; // the last two bytes of the address read from the register
+char * address = malloc(5); // 5 byte address for testing
+char * address_read = malloc(5); // data read from the address
 
-// address = 0xC2C2C2C200
+
+
 address[0] = 0xCE;
-address[1] = 0xCE;
+address[1] = 0xBE;
 address[2] = 0x00;
 address[3] = 0x00;
 address[4] = 0x00;
@@ -161,29 +159,17 @@ TRIS_ce = 0;
  tft_setRotation(0); // Use tft_setRotation(1) for 320x240
  
  // write the 5 byte address to pipe 1
- nrf_write_address(1, address, 5);
+ nrf_write_reg(nrf24l01_RX_ADDR_P0, address, 5);
  
 while(1){
     // turn on power and set some random bit on config reg as a test testing
   
 
-    nrf_read_reg(nrf24l01_RX_ADDR_P1,address_read,5); // read value in address register
+    nrf_read_reg(nrf24l01_RX_ADDR_P0,address_read,5); // read value in address register
     
-    address_data = address_read[1] + address_read[0];
+    //address_data = address_read[1] + address_read[0];
     
-    tft_setCursor(0, 220);
-    tft_setTextColor(ILI9340_MAGENTA); 
-    tft_setTextSize(2);
-    tft_writeString("Config: ");
-
-    tft_fillRoundRect(0,240, 200, 14, 1, ILI9340_BLACK);// x,y,w,h,radius,color
-    tft_setCursor(0, 240);
-    tft_setTextColor(ILI9340_CYAN); 
-    tft_setTextSize(2);
-    sprintf(buffer,"%d", config[0]);
-    tft_writeString(buffer);
-    
-     tft_setCursor(0, 180);
+    tft_setCursor(0, 180);
     tft_setTextColor(ILI9340_MAGENTA); 
     tft_setTextSize(2);
     tft_writeString("Status: ");
@@ -204,7 +190,13 @@ while(1){
     tft_setCursor(0, 240);
     tft_setTextColor(ILI9340_CYAN); 
     tft_setTextSize(2);
-    sprintf(buffer,"%d", address_data);
+//    if(address_read[0] == 0xFFFFFFCE){
+//        sprintf(buffer,"%s", "Correct");
+//    }else{
+//        sprintf(buffer,"%s", "Wrong");
+//    }
+    sprintf(buffer,"%d", address_read[1]);
+    
     tft_writeString(buffer);
     
     delay_ms(100);
