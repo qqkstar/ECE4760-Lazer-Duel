@@ -74,7 +74,7 @@ void nrf_read_reg(char reg, char * buff, int len){
 // data: array of chars to be written (1-5 bytes)
 // len: amount of chars/bytes to be written
 // NOTE: can only be used in power down or standby mode
-// NOTE: use separate function for writing address or payload
+// NOTE: writing address or payload done with specific command
 void nrf_write_reg(char reg, char data){
     _csn = 0; // begin transmission
     status = rf_spiwrite(nrf24l01_W_REGISTER | reg); // send the command to write reg
@@ -90,7 +90,7 @@ void nrf_write_reg(char reg, char data){
 // NOTE: RX pipes 0 and 1 and TX pipe accept 5 bytes, the rest accept 1 byte
 // NOTE: for pipes 2-5 only writes to LSB
 // NOTE: can only be used in power down or standby mode
-// NOT TESTED YET
+// NOT TESTED YET currently returns negative of what it should I think
 void nrf_write_address(char pipe, char * address, char len){
     int i = 0;
     char reg;  // register of pipe
@@ -138,6 +138,16 @@ void nrf_read_payload(char reg, char * buff){
 
 int main(void){
 char * config = malloc(1); // will take value in config register   
+char address[5]; // 5 byte address for testing
+char address_read[5]; // data read from the address
+int address_data; // the last two bytes of the address read from the register
+
+// address = 0xC2C2C2C200
+address[0] = 0xCE;
+address[1] = 0xCE;
+address[2] = 0x00;
+address[3] = 0x00;
+address[4] = 0x00;
 
 // Set outputs to CE and CSN
 TRIS_csn = 0;
@@ -150,19 +160,17 @@ TRIS_ce = 0;
  //240x320 vertical display
  tft_setRotation(0); // Use tft_setRotation(1) for 320x240
  
- nrf_write_reg(nrf24l01_CONFIG, nrf24l01_CONFIG_PRIM_RX | nrf24l01_CONFIG_PWR_UP | nrf24l01_CONFIG_CRCO | nrf24l01_CONFIG_EN_CRC);
+ // write the 5 byte address to pipe 1
+ nrf_write_address(1, address, 5);
+ 
 while(1){
     // turn on power and set some random bit on config reg as a test testing
   
 
-    nrf_read_reg(nrf24l01_CONFIG,config,1); // read value in config register
+    nrf_read_reg(nrf24l01_RX_ADDR_P1,address_read,5); // read value in address register
     
-    if (config[0] == (nrf24l01_CONFIG_PRIM_RX | nrf24l01_CONFIG_PWR_UP | nrf24l01_CONFIG_CRCO)){
-        _ce = 0;
-    }else{
-        _ce ^= 1;
-        
-    }
+    address_data = address_read[1] + address_read[0];
+    
     tft_setCursor(0, 220);
     tft_setTextColor(ILI9340_MAGENTA); 
     tft_setTextSize(2);
@@ -185,6 +193,18 @@ while(1){
     tft_setTextColor(ILI9340_CYAN); 
     tft_setTextSize(2);
     sprintf(buffer,"%d", status);
+    tft_writeString(buffer);
+    
+    tft_setCursor(0, 260);
+    tft_setTextColor(ILI9340_MAGENTA); 
+    tft_setTextSize(2);
+    tft_writeString("Address: ");
+
+    tft_fillRoundRect(0,280, 200, 14, 1, ILI9340_BLACK);// x,y,w,h,radius,color
+    tft_setCursor(0, 240);
+    tft_setTextColor(ILI9340_CYAN); 
+    tft_setTextSize(2);
+    sprintf(buffer,"%d", address_data);
     tft_writeString(buffer);
     
     delay_ms(100);
