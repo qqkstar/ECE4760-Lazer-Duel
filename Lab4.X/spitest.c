@@ -34,19 +34,21 @@ int sys_time_seconds ;
 
 //char reg_read[5]; // register used for reading a single register
 //char payload_read[32]; // register used for reading payload (find length of payload using R_RX_PL_WID)
-char * status;
-char buffer[120];
-void rf_spiwrite(unsigned char c){ // Transfer to SPI
+static char status;
+static char buffer[120];
+char rf_spiwrite(unsigned char c){ // Transfer to SPI
     while (TxBufFullSPI2());
     WriteSPI2(c);
-    while (SPI2STATbits.SPIBUSY); // wait for it to end of transaction
+    //while (SPI2STATbits.SPIBUSY); // wait for it to end of transaction
+    while( !SPI2STATbits.SPIRBF); // check for complete transmit
+    return SPI2BUF;
 }
 
 void init_SPI(){
     // Set up SPI2 to be active high, master, 8 bit mode, and ~4 Mhz CLK
     SpiChnOpen(2, SPI_OPEN_MSTEN | SPI_OPEN_MODE8 | SPI_OPEN_ON | SPI_OPEN_CKE_REV, 16);
     // Set SDI2 to pin 24
-    PPSInput(3, SDI2, RPB13);
+    PPSInput(3, SDI2, RPA4);
     // Set SDO2 to pin 6
     PPSOutput(3, RPA2, SDO2);
     // Set external interrupt 1 to pin 21
@@ -61,11 +63,13 @@ void nrf_read_reg(char reg, char * buff, int len){
     //char reg_read[5]; // register used for reading a single register
     int i = 0;
     _csn = 0; // begin transmission
-    rf_spiwrite(nrf24l01_W_REGISTER | reg); // send command to read register
-    status = (char *)ReadSPI2(); // get status register back when sending command
+    status = rf_spiwrite(nrf24l01_R_REGISTER | reg); // send command to read register
+    //status = ReadSPI2(); // get status register back when sending command
+    //status = SPI2BUF;
+    
     for(i=0;i<len;i++){
-        rf_spiwrite(nrf24l01_SEND_CLOCK); // send clock pulse to continue receiving data
-        buff[i] = ReadSPI2(); // get the data from the register starting with LSB
+        buff[i] = rf_spiwrite(nrf24l01_SEND_CLOCK); // send clock pulse to continue receiving data
+        //buff[i] = (char)ReadSPI2(); // get the data from the register starting with LSB
     }
     _csn = 1; // end transmission
   
@@ -91,35 +95,37 @@ void nrf_read_reg(char reg, char * buff, int len){
 //}
 
 int main(void){
-char * status = malloc(1); // status register as of latest read or write
 char * config = malloc(1); // will take value in config register   
 
 // Set outputs to CE and CSN
 TRIS_csn = 0;
 TRIS_ce = 0;
 
-// turn on power and set some random bit on config reg as a test testing
-_csn = 0;
-rf_spiwrite(nrf24l01_W_REGISTER | nrf24l01_CONFIG);
-rf_spiwrite(nrf24l01_CONFIG_PRIM_RX | nrf24l01_CONFIG_PWR_UP | nrf24l01_CONFIG_CRCO);
-_csn = 1;
-
-nrf_read_reg(nrf24l01_CONFIG,config, 1); // read value in config register
-
+ init_SPI();
  tft_init_hw();
  tft_begin();
  tft_fillScreen(ILI9340_BLACK);
  //240x320 vertical display
  tft_setRotation(0); // Use tft_setRotation(1) for 320x240
-  
+ 
+_csn = 0;
+rf_spiwrite(nrf24l01_W_REGISTER | nrf24l01_CONFIG);
+
+rf_spiwrite(nrf24l01_CONFIG_PRIM_RX | nrf24l01_CONFIG_PWR_UP | nrf24l01_CONFIG_CRCO);
+
+_csn = 1;
+
 while(1){
+    // turn on power and set some random bit on config reg as a test testing
+  
+
+    nrf_read_reg(nrf24l01_CONFIG,config,1); // read value in config register
+    
     if (config[0] == (nrf24l01_CONFIG_PRIM_RX | nrf24l01_CONFIG_PWR_UP | nrf24l01_CONFIG_CRCO)){
-        //_ce = 1;  // toggle ce pin high to signal successful read
-        //delay_ms(100);
         _ce = 0;
     }else{
         _ce ^= 1;
-        delay_ms(100);
+        
     }
     tft_setCursor(0, 220);
     tft_setTextColor(ILI9340_MAGENTA); 
@@ -132,6 +138,21 @@ while(1){
     tft_setTextSize(2);
     sprintf(buffer,"%d", config[0]);
     tft_writeString(buffer);
+    
+     tft_setCursor(0, 180);
+    tft_setTextColor(ILI9340_MAGENTA); 
+    tft_setTextSize(2);
+    tft_writeString("Status: ");
+
+    tft_fillRoundRect(0,200, 200, 14, 1, ILI9340_BLACK);// x,y,w,h,radius,color
+    tft_setCursor(0, 200);
+    tft_setTextColor(ILI9340_CYAN); 
+    tft_setTextSize(2);
+    sprintf(buffer,"%d", status);
+    tft_writeString(buffer);
+    
+    delay_ms(100);
+
 }
 //
 //delay_ms(1);
