@@ -25,7 +25,7 @@ int sys_time_seconds ;
 
 // PIN Setup
 // SCK -> SCK1 (pin 26)
-// SDI -> MISO (RPB13) (pin 24)
+// SDI -> MISO (RPA4) (pin 12)
 // SDO -> MOSI (RPB2) (pin 6)
 // IRQ -> extern interrupt 1 (RPB10) (pin 21)
 // CSN -> RPB7 (I/O) (pin 16)
@@ -33,6 +33,7 @@ int sys_time_seconds ;
 
 
 static char status;
+static char config;
 static char buffer[120];
 
 char rf_spiwrite(unsigned char c){ // Transfer to SPI
@@ -45,9 +46,9 @@ char rf_spiwrite(unsigned char c){ // Transfer to SPI
 void init_SPI(){
     // Set up SPI2 to be active high, master, 8 bit mode, and ~4 Mhz CLK
     SpiChnOpen(2, SPI_OPEN_MSTEN | SPI_OPEN_MODE8 | SPI_OPEN_ON | SPI_OPEN_CKE_REV, 16);
-    // Set SDI2 to pin 24
+    // Set SDI2 to pin 12
     PPSInput(3, SDI2, RPA4);
-    // Set SDO2 to pin 6
+    // Set SDO2 to pin 9
     PPSOutput(3, RPA2, SDO2);
     // Set external interrupt 1 to pin 21
     PPSInput(4, INT1, RPB10);
@@ -71,27 +72,6 @@ void nrf_read_reg(char reg, char * buff, int len){
 }
 
 
-//// writes data to a register
-//// data: array of chars to be written (1-5 bytes)
-//// len: amount of chars/bytes to be written
-//// NOTE: can only be used in power down or standby mode
-//// NOTE: writing address or payload done with specific command
-//void nrf_write_reg(char reg, char data){
-//    _csn = 0; // begin transmission
-//    status = rf_spiwrite(nrf24l01_W_REGISTER | reg); // send the command to write reg
-//    rf_spiwrite(data);
-//    _csn = 1; // end transmission
-//}
-
-
-// sets address of a pipe
-// pipe: RX pipe address should be set for (6 for TX pipe)
-// data: address to be written to pipe (LSB first in array)
-// len: amount of bytes to be written as address
-// NOTE: RX pipes 0 and 1 and TX pipe accept 5 bytes, the rest accept 1 byte
-// NOTE: for pipes 2-5 only writes to LSB
-// NOTE: can only be used in power down or standby mode
-// NOT TESTED YET currently returns negative of what it should I think
 void nrf_write_reg(char reg, char * data, char len){
     int i = 0;
     _csn = 0; // begin transmission
@@ -134,15 +114,52 @@ void nrf_read_payload(char reg, char * buff){
     free(width);
 }
 
+//Sets the power up bit and waits for the startup time, putting the radio in Standby-I mode
+void nrf_pwrup(){
+    nrf_read_reg(nrf24l01_CONFIG, &config, 1);
+    config |= nrf24l01_CONFIG_PWR_UP;
+    nrf_write_reg(nrf24l01_CONFIG, &config, 1);
+    delay_ms(2);//Delay for power up time
+}
+
+//Clear the pwr_up bit, transitioning to power down mode
+void nrf_pwrdown(){
+    nrf_read_reg(nrf24l01_CONFIG, &config, 1);
+    config &= ~(nrf24l01_CONFIG_PWR_UP);
+    nrf_write_reg(nrf24l01_CONFIG, &config, 1);
+    _ce = 0;
+}
+
+//Transitions to rx mode from standby mode
+void nrf_rx_mode(){
+    nrf_read_reg(nrf24l01_CONFIG, &config, 1);
+    config |= nrf24l01_CONFIG_PRIM_RX;
+    nrf_write_reg(nrf24l01_CONFIG, &config, 1);
+    _ce = 1;
+    delay_us(200); //Wait for transition to rx mode time
+}
+
+//Transitions to tx mode from standby mode
+void nrf_tx_mode(){
+    nrf_read_reg(nrf24l01_CONFIG, &config, 1);
+    config &= ~(nrf24l01_CONFIG_PRIM_RX);
+    nrf_write_reg(nrf24l01_CONFIG, &config, 1);
+    _ce = 1;
+    delay_us(200); //Wait for transition to tx mode time
+}
+
+void nrf_standby_mode(){
+    _ce = 0;
+}
+
 int main(void){
 char * config = malloc(1); // will take value in config register   
 char * address = malloc(5); // 5 byte address for testing
 char * address_read = malloc(5); // data read from the address
 
-
-
 address[0] = 0xCE;
 address[1] = 0xBE;
+
 address[2] = 0x00;
 address[3] = 0x00;
 address[4] = 0x00;
@@ -159,47 +176,16 @@ TRIS_ce = 0;
  tft_setRotation(0); // Use tft_setRotation(1) for 320x240
  
  // write the 5 byte address to pipe 1
- nrf_write_reg(nrf24l01_RX_ADDR_P0, address, 5);
- 
+nrf_pwrup();//Go to standby
+nrf_tx_mode();
 while(1){
     // turn on power and set some random bit on config reg as a test testing
-  
-
-    nrf_read_reg(nrf24l01_RX_ADDR_P0,address_read,5); // read value in address register
     
-    //address_data = address_read[1] + address_read[0];
-    
-    tft_setCursor(0, 180);
-    tft_setTextColor(ILI9340_MAGENTA); 
-    tft_setTextSize(2);
-    tft_writeString("Status: ");
-
-    tft_fillRoundRect(0,200, 200, 14, 1, ILI9340_BLACK);// x,y,w,h,radius,color
-    tft_setCursor(0, 200);
-    tft_setTextColor(ILI9340_CYAN); 
-    tft_setTextSize(2);
-    sprintf(buffer,"%d", status);
-    tft_writeString(buffer);
-    
-    tft_setCursor(0, 260);
-    tft_setTextColor(ILI9340_MAGENTA); 
-    tft_setTextSize(2);
-    tft_writeString("Address: ");
-
-    tft_fillRoundRect(0,280, 200, 14, 1, ILI9340_BLACK);// x,y,w,h,radius,color
-    tft_setCursor(0, 240);
-    tft_setTextColor(ILI9340_CYAN); 
-    tft_setTextSize(2);
-//    if(address_read[0] == 0xFFFFFFCE){
-//        sprintf(buffer,"%s", "Correct");
-//    }else{
-//        sprintf(buffer,"%s", "Wrong");
-//    }
-    sprintf(buffer,"%d", address_read[1]);
-    
-    tft_writeString(buffer);
-    
-    delay_ms(100);
-
+    nrf_read_reg(nrf24l01_CONFIG, &config, 1);
+    delay_ms(2);
+//    delay_ms(1000);
+//    nrf_pwrdown();
+//    nrf_read_reg(nrf24l01_CONFIG, &config, 1);
+//    delay_ms(1000);
 }
 } // main
