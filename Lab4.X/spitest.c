@@ -36,6 +36,7 @@ static char status;
 static char config;
 static char buffer[120];
 
+int sending; // high when the radio is still sending data
 char rf_spiwrite(unsigned char c){ // Transfer to SPI
     while (TxBufFullSPI2());
     WriteSPI2(c);
@@ -152,10 +153,86 @@ void nrf_standby_mode(){
     _ce = 0;
 }
 
+// Sets the address to transmit to
+// address: address to transmit to, 5 bytes, LSB first
+// for auto_ack sent pipe 0 to same address on receiver
+void nrf_set_TX_address(char * address){
+    nrf_write_reg(nrf24l01_TX_ADDR, &address, 5);
+}
+
+// Sets the address on the receiving pipe specified (pipes 0 to 5)
+// pipes 2-5 only allow LSB to be changed
+// address: address to set pipe to, 1-5 bytes, LSB first
+// pipe: pipe to set address of
+void nrf_set_RX_address(char * address, int pipe){
+    if ((pipe == 1) |(pipe == 0)){ // check if 5 byte address
+        nrf_write_reg(nrf24l01_RX_ADDR_P0 + pipe, &address,	5);
+    }
+    else{
+        nrf_write_reg(nrf24l01_RX_ADDR_P0 + pipe, &address,	1);
+    }
+}
+
+// sets power of transmitter, possible values and definitions for them are
+//  0dBm: nrf24l01_RF_SETUP_RF_PWR_0
+// -6dBm: nrf24l01_RF_SETUP_RF_PWR_6
+// -12dBm: nrf24l01_RF_SETUP_RF_PWR_12
+// -18dBm: nrf24l01_RF_SETUP_RF_PWR_18
+void nrf_set_transmit_pwr(char power){
+    char setup;
+    nrf_read_reg(nrf24l01_RF_SETUP, &setup, 1); // check value of setup register
+    setup &= ~(nrf24l01_RF_SETUP_RF_PWR); // clear power bits in register
+    setup |= power; // set power bits in register
+    nrf_write_reg(nrf24l01_RF_SETUP, &setup, 1);  
+}
+
+// sets the rf data rate, possible values and definitoins for them are
+// 250 kbps: nrf24l01_DR_LOW
+// 1 Mbps: nrf24l01_DR_MED
+// 2 Mbps: nrf24l01_DR_HIGH
+void nrf_set_transmit_rate(char rate){
+    char setup;
+    ; // check value of setup register
+    setup &= 0xd7;  // clear data rate bits in register
+    setup |= rate; // set data rate bits in register
+    nrf_write_reg(nrf24l01_RF_SETUP, &setup, 1); 
+}
+
+// Sends out a specified payload (in auto acknowledge mode by default)
+// use after powering up radio, and setting address or other settings
+void nrf_send_payload(char * data, int len){
+    nrf_write_payload(data, len);
+    nrf_tx_mode();
+    while(sending); // wait until data sent interrupt triggers
+    sending = 0;
+    _ce = 0; // transition to standby II mode
+    nrf_pwrdown(); // power down radio
+    nrf_pwrup(); // power up radio to reenter standby I mode
+}
+
+void __ISR(_EXTERNAL_1_VECTOR, ipl2) INT1Handler(void){
+    nrf_read_reg(nrf24l01_STATUS, &status, 1); // read the status register
+    // check which type of interrupt occurred
+    if (status & nrf24l01_STATUS_RX_DR){ // if data received
+        
+    }
+    // if data sent or if acknowledge received when auto ack enabled
+    else if(status & nrf24l01_STATUS_TX_DS){ 
+        sending = 1; // signal main code that payload was sent
+        status &= ~(nrf24l01_STATUS_TX_DS); // clear interrupt on radio
+    }
+    else{ // maximum number of retransmit attempts occurred
+        
+    }
+    mINT1ClearIntFlag();
+}
+
 int main(void){
 char * config = malloc(1); // will take value in config register   
 char * address = malloc(5); // 5 byte address for testing
 char * address_read = malloc(5); // data read from the address
+
+INTEnableSystemMultiVectoredInt();
 
 address[0] = 0xCE;
 address[1] = 0xBE;
@@ -177,15 +254,21 @@ TRIS_ce = 0;
  
  // write the 5 byte address to pipe 1
 nrf_pwrup();//Go to standby
-nrf_tx_mode();
+
 while(1){
-    // turn on power and set some random bit on config reg as a test testing
     
-    nrf_read_reg(nrf24l01_CONFIG, &config, 1);
-    delay_ms(2);
+    
+}
+
+
+//while(1){
+//    // turn on power and set some random bit on config reg as a test testing
+//    
+//    nrf_read_reg(nrf24l01_CONFIG, &config, 1);
+//    delay_ms(2);
 //    delay_ms(1000);
 //    nrf_pwrdown();
 //    nrf_read_reg(nrf24l01_CONFIG, &config, 1);
 //    delay_ms(1000);
-}
+//}
 } // main

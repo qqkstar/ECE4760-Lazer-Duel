@@ -185,6 +185,11 @@
 #define nrf24l01_FIFO_STATUS_RX_FULL	0x02
 #define nrf24l01_FIFO_STATUS_RX_EMPTY	0x01
 
+// RF power definitions
+#define nrf24l01_DR_LOW 0x20
+#define nrf24l01_DR_MED 0x00
+#define nrf24l01_DR_HIGH 0x08
+
 // Send no data for when you read data from the radio
 #define nrf24l01_SEND_CLOCK             0x00
 
