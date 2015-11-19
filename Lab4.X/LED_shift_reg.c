@@ -91,7 +91,7 @@ void SPI1_transfer( int data)
 
 int main(void)
 {
-    char data = 0xC3;
+    char data = 0x10;
     char MSB;
     setup();
     while(1){

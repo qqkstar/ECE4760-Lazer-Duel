@@ -156,25 +156,6 @@ void nrf_standby_mode(){
     _ce = 0;
 }
 
-// Sets the address to transmit to
-// address: address to transmit to, 5 bytes, LSB first
-// for auto_ack sent pipe 0 to same address on receiver
-void nrf_set_TX_address(char * address){
-    nrf_write_reg(nrf24l01_TX_ADDR, &address, 5);
-}
-
-// Sets the address on the receiving pipe specified (pipes 0 to 5)
-// pipes 2-5 only allow LSB to be changed
-// address: address to set pipe to, 1-5 bytes, LSB first
-// pipe: pipe to set address of
-void nrf_set_RX_address(char * address, int pipe){
-    if ((pipe == 1) |(pipe == 0)){ // check if 5 byte address
-        nrf_write_reg(nrf24l01_RX_ADDR_P0 + pipe, &address,	5);
-    }
-    else{
-        nrf_write_reg(nrf24l01_RX_ADDR_P0 + pipe, &address,	1);
-    }
-}
 
 // sets power of transmitter, possible values and definitions for them are
 //  0dBm: nrf24l01_RF_SETUP_RF_PWR_0
@@ -237,17 +218,17 @@ void __ISR(_EXTERNAL_1_VECTOR, ipl2) INT1Handler(void){
 
 int main(void){
 char * config = malloc(1); // will take value in config register   
-char * address = malloc(5); // 5 byte address for testing
-char * address_read = malloc(5); // data read from the address
+char send[5]; // 5 byte address for testing
+char * receive[5]; // data read from the address
 
 INTEnableSystemMultiVectoredInt();
 
-address[0] = 0xCE;
-address[1] = 0xBE;
+send[0] = 0xCE;
+send[1] = 0xBE;
 
-address[2] = 0x00;
-address[3] = 0x00;
-address[4] = 0x00;
+send[2] = 0x00;
+send[3] = 0x00;
+send[4] = 0x00;
 
 // Set outputs to CE and CSN
 TRIS_csn = 0;
@@ -267,7 +248,7 @@ nrf_pwrup();//Go to standby
 while(1){
     // turn on power and set some random bit on config reg as a test testing
     
-    nrf_set_TX_address(&address);
+    nrf_write_payload(&address, 5);
     delay_ms(1);
 //    nrf_read_reg(nrf24l01_RX_ADDR_P0, &address_read, 5);
 //    delay_ms(1);
