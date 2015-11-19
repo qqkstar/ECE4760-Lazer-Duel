@@ -176,6 +176,8 @@
         <C32Global>
         </C32Global>
       </item>
+      <item path="LED_shift_reg.c" ex="true" overriding="false">
+      </item>
       <item path="PID.c" ex="true" overriding="false">
         <C32>
         </C32>
@@ -243,7 +245,7 @@
         <C32Global>
         </C32Global>
       </item>
-      <item path="spitest.c" ex="true" overriding="false">
+      <item path="spitest.c" ex="false" overriding="false">
         <C32>
         </C32>
         <C32-AR>

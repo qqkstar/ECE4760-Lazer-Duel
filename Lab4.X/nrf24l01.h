@@ -196,7 +196,7 @@
 // PIN Setup
 // SCK -> SCK1 (pin 26)
 // SDI -> MISO (RPB13) (pin 24)
-// SDO -> MOSI (RPB2) (pin 6)
+// SDO -> MOSI (RPB2) (pin 9)
 // IRQ -> extern interrupt 1 (RPB10) (pin 21)
 // CSN -> RPB7 (I/O) (pin 16)
 // CE -> RPB6 (I/O) (pin 15)

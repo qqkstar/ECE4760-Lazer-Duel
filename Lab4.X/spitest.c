@@ -26,7 +26,7 @@ int sys_time_seconds ;
 // PIN Setup
 // SCK -> SCK2 (pin 26)
 // SDI -> MISO (RPA4) (pin 12)
-// SDO -> MOSI (RPB2) (pin 6)
+// SDO -> MOSI (RPB2) (pin 9)
 // IRQ -> extern interrupt 1 (RPB10) (pin 21)
 // CSN -> RPB7 (I/O) (pin 16)
 // CE -> RPB6 (I/O) (pin 15)
@@ -36,7 +36,10 @@ static char status;
 static char config;
 static char buffer[120];
 
-int sending; // high when the radio is still sending data
+int received; // goes high when message is received
+int sent; // goes high after radio finishes sending payload correctly
+int error; // goes high when no acknowledge is received
+
 char rf_spiwrite(unsigned char c){ // Transfer to SPI
     while (TxBufFullSPI2());
     WriteSPI2(c);
@@ -203,8 +206,12 @@ void nrf_set_transmit_rate(char rate){
 void nrf_send_payload(char * data, int len){
     nrf_write_payload(data, len);
     nrf_tx_mode();
-    while(sending); // wait until data sent interrupt triggers
-    sending = 0;
+    while(!sent){ // wait until data sent interrupt triggers
+        if(error){
+            break;
+        }
+    } 
+    sent = 1;
     _ce = 0; // transition to standby II mode
     nrf_pwrdown(); // power down radio
     nrf_pwrup(); // power up radio to reenter standby I mode
@@ -218,11 +225,12 @@ void __ISR(_EXTERNAL_1_VECTOR, ipl2) INT1Handler(void){
     }
     // if data sent or if acknowledge received when auto ack enabled
     else if(status & nrf24l01_STATUS_TX_DS){ 
-        sending = 1; // signal main code that payload was sent
+        sent = 1; // signal main code that payload was sent
         status &= ~(nrf24l01_STATUS_TX_DS); // clear interrupt on radio
     }
     else{ // maximum number of retransmit attempts occurred
-        
+        error = 1;
+        status &= ~(nrf24l01_STATUS_MAX_RT);
     }
     mINT1ClearIntFlag();
 }
@@ -255,20 +263,13 @@ TRIS_ce = 0;
  // write the 5 byte address to pipe 1
 nrf_pwrup();//Go to standby
 
+
 while(1){
+    // turn on power and set some random bit on config reg as a test testing
     
-    
+    nrf_set_TX_address(&address);
+    delay_ms(1);
+//    nrf_read_reg(nrf24l01_RX_ADDR_P0, &address_read, 5);
+//    delay_ms(1);
 }
-
-
-//while(1){
-//    // turn on power and set some random bit on config reg as a test testing
-//    
-//    nrf_read_reg(nrf24l01_CONFIG, &config, 1);
-//    delay_ms(2);
-//    delay_ms(1000);
-//    nrf_pwrdown();
-//    nrf_read_reg(nrf24l01_CONFIG, &config, 1);
-//    delay_ms(1000);
-//}
 } // main
