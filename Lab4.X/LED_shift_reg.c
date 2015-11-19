@@ -8,7 +8,7 @@
 // serial stuff
 #include <stdio.h>
 #include "config.h"
-//#include "tft_master.h"
+#include "tft_master.h"
 #include "tft_gfx.h"
 // protoThreads environment
 
@@ -58,14 +58,14 @@ void setup()
 
   //////
 
-  #define spi_divider 2
+  #define spi_divider 6
   /* Unlike OpenSPIx(), config for SpiChnOpen describes the non-default
    * settings. eg for OpenSPI2(), use SPI_SMP_OFF (default) to sample
    * at the middle of the data output, use SPI_SMP_ON to sample at end. For
    * SpiChnOpen, using SPICON_SMP as a parameter will use the non-default
    * SPI_SMP_ON setting.
    */
-  #define config SPI_OPEN_MSTEN | SPI_OPEN_MODE8 | SPI_OPEN_DISSDI | SPI_OPEN_CKE_REV
+  //#define config SPI_OPEN_MSTEN | SPI_OPEN_MODE8 | SPI_OPEN_DISSDI | SPI_OPEN_CKE_REV
       /*	SPI_OPEN_MSTEN		-> Master mode enable
        *	SPI_OPEN_MODE16		-> 16-bit SPI mode
        *	SPI_OPEN_DISSDI		-> Disable SDI pin since PIC32 to DAC is a
@@ -74,24 +74,26 @@ void setup()
        *							clock to idle clock state
        */
 
-  SpiChnOpen(spi_channel, config, spi_divider);
+  SpiChnOpen(spi_channel, SPI_OPEN_MSTEN | SPI_OPEN_MODE8 | SPI_OPEN_DISSDI | SPI_OPEN_CKE_REV, spi_divider);
 
 }
  
  
-int SPI1_transfer( int data)
+void SPI1_transfer( int data)
 {                 
     LATBbits.LATB0 = 0;     // set pin RB0 low / disable latch
     while (TxBufFullSPI1());	// ensure buffer is free before writing
     WriteSPI1(data);			// send the data through SPI
-    while (SPI2STATbits.SPIBUSY); // blocking wait for end of transaction
+    while (SPI1STATbits.SPIBUSY); // blocking wait for end of transaction
     LATBbits.LATB0 = 1;     // set pin RB0 high / enable latch
+    ReadSPI1();
 }
-
 
 int main(void)
 {
     setup();
-    SPI1_transfer( 0b00110001 );
-    
+    while(1){
+        SPI1_transfer( 0xaa );
+        delay_ms(1);
+    }
 }

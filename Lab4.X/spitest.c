@@ -24,7 +24,7 @@ static struct pt pt3, pt_input, pt_output, pt_DMA_output ;
 int sys_time_seconds ;
 
 // PIN Setup
-// SCK -> SCK1 (pin 26)
+// SCK -> SCK2 (pin 26)
 // SDI -> MISO (RPA4) (pin 12)
 // SDO -> MOSI (RPB2) (pin 6)
 // IRQ -> extern interrupt 1 (RPB10) (pin 21)

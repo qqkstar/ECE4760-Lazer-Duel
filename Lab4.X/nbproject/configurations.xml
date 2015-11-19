@@ -25,6 +25,7 @@
       <itemPath>PID.c</itemPath>
       <itemPath>newmain.c</itemPath>
       <itemPath>spitest.c</itemPath>
+      <itemPath>LED_shift_reg.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -33,7 +34,7 @@
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>
-    <Elem>.</Elem>
+    <Elem>..</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
@@ -229,6 +230,20 @@
         </C32Global>
       </item>
       <item path="newmain.c" ex="true" overriding="false">
+        <C32>
+        </C32>
+        <C32-AR>
+        </C32-AR>
+        <C32-AS>
+        </C32-AS>
+        <C32-LD>
+        </C32-LD>
+        <C32CPP>
+        </C32CPP>
+        <C32Global>
+        </C32Global>
+      </item>
+      <item path="spitest.c" ex="true" overriding="false">
         <C32>
         </C32>
         <C32-AR>
