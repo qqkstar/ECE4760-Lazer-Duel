@@ -91,9 +91,19 @@ void SPI1_transfer( int data)
 
 int main(void)
 {
+    char data = 0xC3;
+    char MSB;
     setup();
     while(1){
-        SPI1_transfer( 0xaa );
-        delay_ms(1);
+        if((data & 0x80) == 0x80){
+            MSB = 1;
+        }
+        else{
+            MSB = 0;
+        }
+        data = data << 1;
+        data += MSB;
+        SPI1_transfer( data );
+        delay_ms(100);
     }
 }
