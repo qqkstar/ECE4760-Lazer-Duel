@@ -45,17 +45,17 @@ OBJECTDIR=build/${CND_CONF}/${IMAGE_TYPE}
 DISTDIR=dist/${CND_CONF}/${IMAGE_TYPE}
 
 # Source Files Quoted if spaced
-SOURCEFILES_QUOTED_IF_SPACED=tft_master.c tft_gfx.c glcdfont.c spitest.c
+SOURCEFILES_QUOTED_IF_SPACED=tft_master.c tft_gfx.c glcdfont.c irtest.c
 
 # Object Files Quoted if spaced
-OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/tft_master.o ${OBJECTDIR}/tft_gfx.o ${OBJECTDIR}/glcdfont.o ${OBJECTDIR}/spitest.o
-POSSIBLE_DEPFILES=${OBJECTDIR}/tft_master.o.d ${OBJECTDIR}/tft_gfx.o.d ${OBJECTDIR}/glcdfont.o.d ${OBJECTDIR}/spitest.o.d
+OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/tft_master.o ${OBJECTDIR}/tft_gfx.o ${OBJECTDIR}/glcdfont.o ${OBJECTDIR}/irtest.o
+POSSIBLE_DEPFILES=${OBJECTDIR}/tft_master.o.d ${OBJECTDIR}/tft_gfx.o.d ${OBJECTDIR}/glcdfont.o.d ${OBJECTDIR}/irtest.o.d
 
 # Object Files
-OBJECTFILES=${OBJECTDIR}/tft_master.o ${OBJECTDIR}/tft_gfx.o ${OBJECTDIR}/glcdfont.o ${OBJECTDIR}/spitest.o
+OBJECTFILES=${OBJECTDIR}/tft_master.o ${OBJECTDIR}/tft_gfx.o ${OBJECTDIR}/glcdfont.o ${OBJECTDIR}/irtest.o
 
 # Source Files
-SOURCEFILES=tft_master.c tft_gfx.c glcdfont.c spitest.c
+SOURCEFILES=tft_master.c tft_gfx.c glcdfont.c irtest.c
 
 
 CFLAGS=
@@ -112,11 +112,11 @@ ${OBJECTDIR}/glcdfont.o: glcdfont.c  nbproject/Makefile-${CND_CONF}.mk
 	@${RM} ${OBJECTDIR}/glcdfont.o 
 	@${FIXDEPS} "${OBJECTDIR}/glcdfont.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/glcdfont.o.d" -o ${OBJECTDIR}/glcdfont.o glcdfont.c   
 	
-${OBJECTDIR}/spitest.o: spitest.c  nbproject/Makefile-${CND_CONF}.mk
+${OBJECTDIR}/irtest.o: irtest.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
-	@${RM} ${OBJECTDIR}/spitest.o.d 
-	@${RM} ${OBJECTDIR}/spitest.o 
-	@${FIXDEPS} "${OBJECTDIR}/spitest.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/spitest.o.d" -o ${OBJECTDIR}/spitest.o spitest.c   
+	@${RM} ${OBJECTDIR}/irtest.o.d 
+	@${RM} ${OBJECTDIR}/irtest.o 
+	@${FIXDEPS} "${OBJECTDIR}/irtest.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/irtest.o.d" -o ${OBJECTDIR}/irtest.o irtest.c   
 	
 else
 ${OBJECTDIR}/tft_master.o: tft_master.c  nbproject/Makefile-${CND_CONF}.mk
@@ -137,11 +137,11 @@ ${OBJECTDIR}/glcdfont.o: glcdfont.c  nbproject/Makefile-${CND_CONF}.mk
 	@${RM} ${OBJECTDIR}/glcdfont.o 
 	@${FIXDEPS} "${OBJECTDIR}/glcdfont.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/glcdfont.o.d" -o ${OBJECTDIR}/glcdfont.o glcdfont.c   
 	
-${OBJECTDIR}/spitest.o: spitest.c  nbproject/Makefile-${CND_CONF}.mk
+${OBJECTDIR}/irtest.o: irtest.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
-	@${RM} ${OBJECTDIR}/spitest.o.d 
-	@${RM} ${OBJECTDIR}/spitest.o 
-	@${FIXDEPS} "${OBJECTDIR}/spitest.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/spitest.o.d" -o ${OBJECTDIR}/spitest.o spitest.c   
+	@${RM} ${OBJECTDIR}/irtest.o.d 
+	@${RM} ${OBJECTDIR}/irtest.o 
+	@${FIXDEPS} "${OBJECTDIR}/irtest.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/irtest.o.d" -o ${OBJECTDIR}/irtest.o irtest.c   
 	
 endif
 

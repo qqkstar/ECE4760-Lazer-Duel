@@ -26,14 +26,14 @@
 #pragma config FNOSC = FRCPLL, POSCMOD = HS, FPLLIDIV = DIV_2, FPLLMUL = MUL_20, FPBDIV = DIV_1, FPLLODIV = DIV_2
 #pragma config FWDTEN = OFF
 // frequency we're running at
-#define	SYS_FREQ 40000000
+#define	SYS_FREQ 64000000
 
 // volatiles for the stuff used in the ISR
 volatile unsigned int i, j, packed, DAC_value; // voice variables
-volatile int CVRCON_setup; // stores the voltage ref config register after it is set up
+//volatile int CVRCON_setup; // stores the voltage ref config register after it is set up
 // contains digit speech waveform packed so that
 // low-order 4 bits is sample t and high order 4 bits is sample t+1
-//#include "AllDigits_packed.h"
+
 #include "laser_8khz_packed.h"
 
 // Timer 2 interrupt handler ///////

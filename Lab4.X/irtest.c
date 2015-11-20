@@ -36,7 +36,7 @@
 
 // volatiles for the stuff used in the ISR
 volatile unsigned int i, j, packed, DAC_value; // voice variables
-volatile int CVRCON_setup; // stores the voltage ref config register after it is set up
+//volatile int CVRCON_setup; // stores the voltage ref config register after it is set up
 // contains digit speech waveform packed so that
 // low-order 4 bits is sample t and high order 4 bits is sample t+1
 
@@ -109,7 +109,7 @@ void playLaser(){
         // Set up timer2 on,  interrupts, internal clock, prescalar 1, toggle rate
         // For voice synth run at 8 kHz
         OpenTimer2(T2_ON | T2_SOURCE_INT | T2_PS_1_1, 2500);
-        OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 50000);
+        OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 65000);
         // set up the timer interrupt with a priority of 2
         ConfigIntTimer2(T2_INT_ON | T2_INT_PRIOR_2);
         ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
@@ -156,7 +156,7 @@ void __ISR(_TIMER_5_VECTOR, ipl2) T5Handler(void){
     mT3ClearIntFlag();
     CVREFClose();
     //DmaChnDisable(dmaChn);
-    //CloseTimer2();
+    CloseTimer2();
     CloseTimer5();
 }
 
@@ -260,15 +260,15 @@ void main(void) {
 
     // Open the desired DMA channel.
     // We enable the AUTO option, we'll keep repeating the sam transfer over and over.
-    DmaChnOpen(dmaChn, 0, DMA_OPEN_AUTO);
+    //DmaChnOpen(dmaChn, 0, DMA_OPEN_AUTO);
 
     // set the transfer parameters: source & destination address, source & destination size, number of bytes per event
     // Setting the last parameter to one makes the DMA output one byte/interrupt
-    DmaChnSetTxfer(dmaChn, sine_table, (void*)&CVRCON, 256, 1, 1);
+    //DmaChnSetTxfer(dmaChn, sine_table, (void*)&CVRCON, 256, 1, 1);
 
     // set the transfer event control: what event is to start the DMA transfer
     // In this case, timer2
-    DmaChnSetEventControl(dmaChn, DMA_EV_START_IRQ(_TIMER_4_IRQ));
+    //DmaChnSetEventControl(dmaChn, DMA_EV_START_IRQ(_TIMER_4_IRQ));
     
   // init the display
   tft_init_hw();
