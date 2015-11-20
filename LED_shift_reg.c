@@ -1,5 +1,5 @@
 
-// i/o names 
+// i/o names
 #define _SUPPRESS_PLIB_WARNING 1
 #include <plib.h>
 
@@ -13,21 +13,21 @@
 // protoThreads environment
 
 // PIN Setup
-// Latch Pin                         <-- RB0 (pin 4)
+// Latch Pin                         <-- RB4 (pin 11)
 // ClockPin (SHCP)                   <-- SCK1(pin 25)
-// DataPin (SPI1)                    <-- RA1 (pin 3)
+// DataPin (SPI1)                    <-- RB5 (pin 14)
 
 
 int led_out = 0b11111111;
 
-void setup() 
+void setup()
 {
   ANSELBbits.ANSB0 = 0;   // sets pin RB0 as digital
-  TRISBbits.TRISB0 = 0;   // configure pin RB as an output 
-  
-  PPSOutput(2, RPA1, SDO1);	// map SDO1 to RA1
+  TRISBbits.TRISB0 = 0;   // configure pin RB as an output
 
-  
+  PPSOutput(2, RPB5, SDO1);	// map SDO1 to RA1
+
+
     //#define config1 SPI_MODE16_ON | SPI_CKE_ON | MASTER_ENABLE_ON
   //	/*	FRAME_ENABLE_OFF
   //	 *	ENABLE_SDO_PIN		-> SPI Output pin enabled
@@ -58,7 +58,7 @@ void setup()
 
   //////
 
-  #define spi_divider 2
+  #define spi_divider 6
   /* Unlike OpenSPIx(), config for SpiChnOpen describes the non-default
    * settings. eg for OpenSPI2(), use SPI_SMP_OFF (default) to sample
    * at the middle of the data output, use SPI_SMP_ON to sample at end. For
@@ -77,14 +77,14 @@ void setup()
   SpiChnOpen(spi_channel, config, spi_divider);
 
 }
- 
- 
+
+
 int SPI1_transfer( int data)
-{                 
+{
     LATBbits.LATB0 = 0;     // set pin RB0 low / disable latch
     while (TxBufFullSPI1());	// ensure buffer is free before writing
     WriteSPI1(data);			// send the data through SPI
-    while (SPI2STATbits.SPIBUSY); // blocking wait for end of transaction
+    while (SPI1STATbits.SPIBUSY); // blocking wait for end of transaction
     LATBbits.LATB0 = 1;     // set pin RB0 high / enable latch
 }
 
@@ -92,6 +92,8 @@ int SPI1_transfer( int data)
 int main(void)
 {
     setup();
-    SPI1_transfer( 0b00110001 );
-    
+    while (1){
+      SPI1_transfer( 0b00110001 );
+    }
+
 }

@@ -21,6 +21,20 @@
 #define RECEIVER BIT_6
 #define dmaChn 0
 
+
+#define LATCH LATBbits.LATB4
+
+#define spi_channel	1
+    // Use channel 2 since channel 1 is used by TFT display
+
+#define spi_divider 10
+
+// PIN Setup
+// Latch Pin                         <-- RB4 (pin 11)
+// ClockPin (SHCP)                   <-- SCK1(pin 25)
+// DataPin (SPI1)                    <-- RB5 (pin 14)
+
+
 static struct pt pt3, pt_input, pt_output, pt_DMA_output ;
 // turn threads 1 and 2 on/off and set thread timing
 int sys_time_seconds ;
@@ -38,10 +52,31 @@ volatile unsigned char sine_table[256];
 // note that UART input and output are threads
 static struct pt pt_timer, pt_rpm, pt_pid ;
 
+volatile static int lives = 0xFF;
 
+void SPI_setup() 
+{
+  TRISBbits.TRISB4 = 0;   // configure pin RB as an output  
+  PPSOutput(2, RPB5, SDO1);	// map SDO1 to RA1
+
+}
+
+void SPI1_transfer( int data)
+{                 
+    SpiChnOpen(spi_channel, SPI_OPEN_MSTEN | SPI_OPEN_MODE8 | SPI_OPEN_DISSDI | SPI_OPEN_CKE_REV, spi_divider);
+    LATCH = 0;     // set pin RB0 low / disable latch
+    while (TxBufFullSPI1());	// ensure buffer is free before writing
+    WriteSPI1(data);			// send the data through SPI
+    while (SPI1STATbits.SPIBUSY); // blocking wait for end of transaction
+    LATCH = 1;     // set pin RB0 high / enable latch
+    ReadSPI1();
+    //SpiChnClose(spi_channel);
+    CloseSPI1();
+}
 
 // Play game over sound
 void playSound1(){
+
     DmaChnEnable(dmaChn);
     OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, timer_limit_1);
     OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 50000);
@@ -53,6 +88,7 @@ void playSound1(){
 
 // Play score decrease sound
 void playSound2(){
+
     DmaChnEnable(dmaChn);
     OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, timer_limit_2);
     OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 50000);
@@ -64,6 +100,7 @@ void playSound2(){
 
 // Play score increase sound
 void playSound3(){
+
     DmaChnEnable(dmaChn);
     OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, timer_limit_3);
     OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 50000);
@@ -84,25 +121,44 @@ static PT_THREAD (protothread_timer(struct pt *pt))
     PT_BEGIN(pt);
      
       while(1) {
+          
           //Trigger pressed, fire IR
           if(alive == 1){
             if(mPORTAReadBits(BIT_1)){
                 OC1RS = 842;
                 mPORTBSetBits(SHOOT_LED);
-                playSound1();
+                CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
+               playSound1();
                 PT_YIELD_TIME_msec(100);
                 OC1RS = 0;  
                 mPORTBClearBits(SHOOT_LED);
+                //CVREFOpen(CVREF_DISABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
+                //CVREFClose();
+                CVRCON = 0;
                 PT_YIELD_TIME_msec(200);
+                
             }else{
                 OC1RS = 0;
             }
           }else{
               mPORTBClearBits(LIFE_LED);
+             CVRCON = 0;
+             PT_YIELD_TIME_msec(10);
+              SPI1_transfer(lives);
+              CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
               playSound2();
+              
               PT_YIELD_TIME_msec(2000);
+              playSound3();
+              PT_YIELD_TIME_msec(200);
               mPORTBSetBits(LIFE_LED);
               alive = 1;
+              //CVREFClose();
+              //CVREFOpen(CVREF_DISABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
+              CVRCON = 0;
+              PT_YIELD_TIME_msec(100);
+               
+              
           }
 
       } // END WHILE(1)
@@ -141,20 +197,20 @@ void main(void) {
   PT_INIT(&pt_timer);
  
   
-   timer_limit_1 = SYS_FREQ/(256*500);
+   timer_limit_1 = SYS_FREQ/(256*900);
     timer_limit_2 = SYS_FREQ/(256*200);
     timer_limit_3 = SYS_FREQ/(256*300);
     
 
     // set up the Vref pin and use as a DAC
     // enable module| eanble output | use low range output | use internal reference | desired step
-    CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
+    //CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
     // And read back setup from CVRCON for speed later
     // 0x8060 is enabled with output enabled, Vdd ref, and 0-0.6(Vdd) range
 
     int i;
     for (i=0; i <256; i++){
-        sine_table[i] = (signed char) (8.0 * sin((float)i*6.283/(float)256));
+        sine_table[i] = (signed char) (8.0 * (sin((float)i*6.283/(float)256) + sin((float)(4.5*i*6.283)/(float)256)));
         sine_table[i] = (sine_table[i] & 0x0F) | 0x8060;
     }
 
@@ -187,6 +243,9 @@ void main(void) {
   mPORTBSetPinsDigitalIn(RECEIVER);
   
   INTEnableSystemMultiVectoredInt();
+  
+ SPI_setup();
+ SPI1_transfer(lives);
   // round-robin scheduler for threads
   while (1){
       PT_SCHEDULE(protothread_timer(&pt_timer));
@@ -197,7 +256,21 @@ void main(void) {
 
 void __ISR(_EXTERNAL_0_VECTOR, ipl2) INT0Interrupt() 
 { 
-   alive = 0;
+   int cnt = 0;
+   //Debounce
+   while(cnt<1000){
+       if(mPORTBReadBits(RECEIVER) == 0){
+           cnt++;
+       }else{
+           break;
+       }
+   }
+   if(cnt == 1000){
+        alive = 0;
+        lives = lives << 1;
+   }else{
+       alive = 1;
+   }
    mINT0ClearIntFlag(); 
        
 } 
