@@ -37,6 +37,7 @@ static char config;
 static char buffer[120];
 
 char RX_payload[32];
+int payload_size;
 
 int received; // goes high when message is received
 int sent; // goes high after radio finishes sending payload correctly
@@ -58,6 +59,8 @@ void init_SPI(){
     PPSOutput(3, RPA2, SDO2);
     // Set external interrupt 1 to pin 21
     PPSInput(4, INT1, RPB10);
+    
+    ConfigINT1(EXT_INT_PRI_2 | FALLING_EDGE_INT | EXT_INT_ENABLE);
 }
 
 // Read a register from the nrf24l01
@@ -72,7 +75,6 @@ void nrf_read_reg(char reg, char * buff, int len){
     
     for(i=0;i<len;i++){
         buff[i] = rf_spiwrite(nrf24l01_SEND_CLOCK); // send clock pulse to continue receiving data
-        //buff[i] = (char)ReadSPI2(); // get the data from the register starting with LSB
     }
     _csn = 1; // end transmission
 }
@@ -86,6 +88,22 @@ void nrf_write_reg(char reg, char * data, char len){
         rf_spiwrite(data[i]); // write each char/byte to address reg
     }
     _csn = 1; // end transmission
+}
+
+// flushes the tx FIFO
+void nrf_flush_tx(){
+    _csn = 0;
+    rf_spiwrite(nrf24l01_FLUSH_TX);
+    _csn = 1;
+    
+}
+
+// flushes the rx FIFO
+// NOTE: do not use while sending acknowledge
+void nrf_flush_rx(){
+    _csn = 0;
+    rf_spiwrite(nrf24l01_FLUSH_RX);
+    _csn = 1;   
 }
 
 
@@ -106,17 +124,13 @@ void nrf_write_payload(char * data, char len){
 
 // should read the payload into a buffer NOT TESTED YET
 void nrf_read_payload(char * buff){
-    int i = 0;
-    char * width = malloc(1); // width of payload to read in first char
-    nrf_read_reg(nrf24l01_R_REGISTER_WID, &width, 1); // get the size of the payload
-    
     _csn = 0; // begin transmission
     status = rf_spiwrite(nrf24l01_R_RX_PAYLOAD); // send command to read payload
-    for(i=0;i<width[0];i++){
+    int i;
+    for(i=0;i<payload_size;i++){
         buff[i] = rf_spiwrite(nrf24l01_SEND_CLOCK);
     }
     _csn = 1; // end transmission
-    free(width);
 }
 
 //Sets the power up bit and waits for the startup time, putting the radio in Standby-I mode
@@ -205,16 +219,17 @@ void __ISR(_EXTERNAL_1_VECTOR, ipl2) INT1Handler(void){
     if (status & nrf24l01_STATUS_RX_DR){ // if data received
         nrf_read_payload(&RX_payload);
         received = 1; // signal main code that payload was received
-        status &= ~(nrf24l01_STATUS_TX_DS); // clear interrupt on radio
+        status |= nrf24l01_STATUS_TX_DS; // clear interrupt on radio
     }
     // if data sent or if acknowledge received when auto ack enabled
     else if(status & nrf24l01_STATUS_TX_DS){ 
         sent = 1; // signal main code that payload was sent
-        status &= ~(nrf24l01_STATUS_TX_DS); // clear interrupt on radio
+        status |= nrf24l01_STATUS_TX_DS; // clear interrupt on radio
     }
     else{ // maximum number of retransmit attempts occurred
-        error = 1;
-        status &= ~(nrf24l01_STATUS_MAX_RT);
+        error = 1; // signal main code that the payload was not received
+        status |= nrf24l01_STATUS_MAX_RT; // clear interrupt on radio
+        nrf_flush_tx(); // clear the TX FIFO so for a new transmission
     }
     mINT1ClearIntFlag();
 }
@@ -222,38 +237,36 @@ void __ISR(_EXTERNAL_1_VECTOR, ipl2) INT1Handler(void){
 int main(void){
 int TX = 0; // is it transmitter or receiver
 char * config = malloc(1); // will take value in config register   
-char send[5]; // 5 byte address for testing
-char * receive[5]; // data read from the address
+char send; // 5 byte address for testing
+char receive; // data read from the address
 
 INTEnableSystemMultiVectoredInt();
 
-send[0] = 0xCE;
-send[1] = 0xBE;
-
-send[2] = 0x00;
-send[3] = 0xAA;
-send[4] = 0x00;
+send = 0xCE;
 
 // Set outputs to CE and CSN
 TRIS_csn = 0;
 TRIS_ce = 0;
 
- init_SPI();
- tft_init_hw();
- tft_begin();
- tft_fillScreen(ILI9340_BLACK);
- //240x320 vertical display
- tft_setRotation(0); // Use tft_setRotation(1) for 320x240
+init_SPI();
+tft_init_hw();
+tft_begin();
+tft_fillScreen(ILI9340_BLACK);
+//240x320 vertical display
+tft_setRotation(0); // Use tft_setRotation(1) for 320x240
  
- // write the 5 byte address to pipe 1
+// write the 5 byte address to pipe 1
 nrf_pwrup();//Go to standby
 
+// set the payload width to 1 bytes
+payload_size = 1;
+nrf_write_reg(nrf24l01_RX_PW_P0, &payload_size, 1);
 
 while(1){
     // if transmitter
     if(TX){
-        nrf_send_payload(send, 5);
-        delay_ms(10000); // wait a bit before sending it again
+        nrf_send_payload(&send, 1);
+        delay_ms(1000); // wait a bit before sending it again
     }
     else{
         nrf_rx_mode();
@@ -262,20 +275,14 @@ while(1){
         tft_setTextSize(2);
         tft_writeString("Sent");
         }
-        int i;
-        for(i=0;i<5;i++){
-            receive[i] = RX_payload[i];
-        }
-        if(receive[0] != 0){
+        receive = RX_payload[0];
+        if(receive != 0){
             nrf_read_reg(nrf24l01_STATUS, &status, 1);
-            tft_fillRoundRect(0,300, 100, 14, 1, ILI9340_BLACK);// x,y,w,h,radius,color
             tft_setCursor(0, 300);
             tft_setTextColor(ILI9340_YELLOW); tft_setTextSize(2);
-            sprintf(buffer,"%char", receive[0]);
+            sprintf(buffer,"%X", receive);
             tft_writeString(buffer);
         }
     }
-//    nrf_read_reg(nrf24l01_RX_ADDR_P0, &address_read, 5);
-//    delay_ms(1);
 }
 } // main
