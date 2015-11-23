@@ -211,12 +211,12 @@ void nrf_send_payload(char * data, int len){
     nrf_write_payload(data, len);
     nrf_tx_mode();
     while(!sent){ // wait until data sent interrupt triggers
-//        if(error){
-//            break;
-//        }
-    } 
-//    error = 0;
-    sent = 1;
+        if(error){
+            break;
+        }
+    }
+    error = 0;
+    sent = 0;
     _ce = 0; // transition to standby II mode
     nrf_pwrdown(); // power down radio
     nrf_pwrup(); // power up radio to reenter standby I mode
@@ -224,7 +224,7 @@ void nrf_send_payload(char * data, int len){
 }
 
 void __ISR(_EXTERNAL_1_VECTOR, ipl2) INT1Handler(void){
-    
+    _LEDRED = 1;
     nrf_read_reg(nrf24l01_STATUS, &status, 1); // read the status register
     // check which type of interrupt occurred
     if (status & nrf24l01_STATUS_RX_DR){ // if data received
@@ -248,11 +248,12 @@ void __ISR(_EXTERNAL_1_VECTOR, ipl2) INT1Handler(void){
 }
 
 int main(void){
-int TX = 0; // is it transmitter or receiver (0 is rx 1 is tx)
+int TX = 1; // is it transmitter or receiver (0 is rx 1 is tx)
 char * config = malloc(1); // will take value in config register   
 char send; // 5 byte address for testing
 char receive; // data read from the address
 
+        
 INTEnableSystemMultiVectoredInt();
 
 send = 0xBB;
@@ -274,39 +275,54 @@ nrf_pwrup();//Go to standby
 // set the payload width to 1 bytes
 payload_size = 1;
 nrf_write_reg(nrf24l01_RX_PW_P0, &payload_size, 1);
+nrf_write_reg(nrf24l01_RX_PW_P1, &payload_size, 1);
+nrf_write_reg(nrf24l01_RX_PW_P2, &payload_size, 1);
+nrf_write_reg(nrf24l01_RX_PW_P3, &payload_size, 1);
+nrf_write_reg(nrf24l01_RX_PW_P4, &payload_size, 1);
+nrf_write_reg(nrf24l01_RX_PW_P5, &payload_size, 1);
 
 // Disable auto ack
 char disable_ack = nrf24l01_EN_AA_ENAA_NONE;
-nrf_write_reg(nrf24l01_EN_AA, &disable_ack, 1);
+//nrf_write_reg(nrf24l01_EN_AA, &disable_ack, 1);
 
 _TRIS_LEDRED = 0;
 _TRIS_LEDYELLOW = 0;
 _LEDRED = 0;
 _LEDYELLOW = 0;
+nrf_flush_rx();
 while(1){
     // if transmitter
     if(TX){
         nrf_send_payload(&send, 1);
-        send = send+1;
+        send = send*3;
         delay_ms(1000); // wait a bit before sending it again
         _LEDYELLOW = 0;
+        _LEDRED = 0;
+        delay_ms(1000);
     }
     else{
         nrf_rx_mode();
-        receive = RX_payload[0];
-        if(received == 1){
-            tft_setCursor(0, 60);
-            tft_setTextColor(ILI9340_MAGENTA); 
-            tft_setTextSize(2);
-            tft_writeString("Sent");
-            nrf_read_reg(nrf24l01_STATUS, &status, 1);
-            tft_setCursor(0, 300);
-            tft_setTextColor(ILI9340_YELLOW); tft_setTextSize(2);
-            sprintf(buffer,"%X", receive);
-            tft_writeString(buffer);
-            received = 0;
-            receive = 0;
-            nrf_flush_rx();
+        while(1){
+            receive = RX_payload[0];
+            //nrf_flush_rx();
+            if(received == 1){
+                tft_fillScreen(ILI9340_BLACK);
+                _LEDRED = 0;
+                
+                delay_ms(1000);
+                tft_setCursor(0, 60);
+                tft_setTextColor(ILI9340_MAGENTA); 
+                tft_setTextSize(2);
+                tft_writeString("Sent");
+                nrf_read_reg(nrf24l01_STATUS, &status, 1);
+                tft_setCursor(0, 300);
+                tft_setTextColor(ILI9340_YELLOW); tft_setTextSize(2);
+                sprintf(buffer,"%X", receive);
+                tft_writeString(buffer);
+                received = 0;
+                receive = 0;
+                nrf_flush_rx();
+            }
         }
     }
 }
