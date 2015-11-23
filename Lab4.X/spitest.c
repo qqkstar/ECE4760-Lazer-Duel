@@ -43,6 +43,12 @@ int received; // goes high when message is received
 int sent; // goes high after radio finishes sending payload correctly
 int error; // goes high when no acknowledge is received
 
+#define _LEDRED        LATAbits.LATA0
+#define _TRIS_LEDRED   TRISAbits.TRISA0
+
+#define _LEDYELLOW        LATBbits.LATB0
+#define _TRIS_LEDYELLOW   TRISBbits.TRISB0
+
 char rf_spiwrite(unsigned char c){ // Transfer to SPI
     while (TxBufFullSPI2());
     WriteSPI2(c);
@@ -60,7 +66,9 @@ void init_SPI(){
     // Set external interrupt 1 to pin 21
     PPSInput(4, INT1, RPB10);
     
+    
     ConfigINT1(EXT_INT_PRI_2 | FALLING_EDGE_INT | EXT_INT_ENABLE);
+    EnableINT1;
 }
 
 // Read a register from the nrf24l01
@@ -190,8 +198,7 @@ void nrf_set_transmit_pwr(char power){
 // 1 Mbps: nrf24l01_DR_MED
 // 2 Mbps: nrf24l01_DR_HIGH
 void nrf_set_transmit_rate(char rate){
-    char setup;
-    ; // check value of setup register
+    char setup; // check value of setup register
     setup &= 0xd7;  // clear data rate bits in register
     setup |= rate; // set data rate bits in register
     nrf_write_reg(nrf24l01_RF_SETUP, &setup, 1); 
@@ -200,49 +207,55 @@ void nrf_set_transmit_rate(char rate){
 // Sends out a specified payload (in auto acknowledge mode by default)
 // use after powering up radio, and setting address or other settings
 void nrf_send_payload(char * data, int len){
+    nrf_flush_tx(); // clear the TX FIFO so for a new transmission
     nrf_write_payload(data, len);
     nrf_tx_mode();
     while(!sent){ // wait until data sent interrupt triggers
-        if(error){
-            break;
-        }
+//        if(error){
+//            break;
+//        }
     } 
+//    error = 0;
     sent = 1;
     _ce = 0; // transition to standby II mode
     nrf_pwrdown(); // power down radio
     nrf_pwrup(); // power up radio to reenter standby I mode
+    
 }
 
 void __ISR(_EXTERNAL_1_VECTOR, ipl2) INT1Handler(void){
+    
     nrf_read_reg(nrf24l01_STATUS, &status, 1); // read the status register
     // check which type of interrupt occurred
     if (status & nrf24l01_STATUS_RX_DR){ // if data received
         nrf_read_payload(&RX_payload);
         received = 1; // signal main code that payload was received
-        status |= nrf24l01_STATUS_TX_DS; // clear interrupt on radio
+        status |= nrf24l01_STATUS_RX_DR; // clear interrupt on radio
     }
     // if data sent or if acknowledge received when auto ack enabled
-    else if(status & nrf24l01_STATUS_TX_DS){ 
+    else if(status & nrf24l01_STATUS_TX_DS){
+        _LEDYELLOW = 1;
         sent = 1; // signal main code that payload was sent
         status |= nrf24l01_STATUS_TX_DS; // clear interrupt on radio
     }
     else{ // maximum number of retransmit attempts occurred
+        _LEDRED = 1;
         error = 1; // signal main code that the payload was not received
         status |= nrf24l01_STATUS_MAX_RT; // clear interrupt on radio
-        nrf_flush_tx(); // clear the TX FIFO so for a new transmission
     }
+    nrf_write_reg(nrf24l01_STATUS, &status, 1);
     mINT1ClearIntFlag();
 }
 
 int main(void){
-int TX = 0; // is it transmitter or receiver
+int TX = 0; // is it transmitter or receiver (0 is rx 1 is tx)
 char * config = malloc(1); // will take value in config register   
 char send; // 5 byte address for testing
 char receive; // data read from the address
 
 INTEnableSystemMultiVectoredInt();
 
-send = 0xCE;
+send = 0xBB;
 
 // Set outputs to CE and CSN
 TRIS_csn = 0;
@@ -262,26 +275,38 @@ nrf_pwrup();//Go to standby
 payload_size = 1;
 nrf_write_reg(nrf24l01_RX_PW_P0, &payload_size, 1);
 
+// Disable auto ack
+char disable_ack = nrf24l01_EN_AA_ENAA_NONE;
+nrf_write_reg(nrf24l01_EN_AA, &disable_ack, 1);
+
+_TRIS_LEDRED = 0;
+_TRIS_LEDYELLOW = 0;
+_LEDRED = 0;
+_LEDYELLOW = 0;
 while(1){
     // if transmitter
     if(TX){
         nrf_send_payload(&send, 1);
+        send = send+1;
         delay_ms(1000); // wait a bit before sending it again
+        _LEDYELLOW = 0;
     }
     else{
         nrf_rx_mode();
-        if(received == 1){
-            tft_setCursor(0, 60);tft_setTextColor(ILI9340_MAGENTA); 
-        tft_setTextSize(2);
-        tft_writeString("Sent");
-        }
         receive = RX_payload[0];
-        if(receive != 0){
+        if(received == 1){
+            tft_setCursor(0, 60);
+            tft_setTextColor(ILI9340_MAGENTA); 
+            tft_setTextSize(2);
+            tft_writeString("Sent");
             nrf_read_reg(nrf24l01_STATUS, &status, 1);
             tft_setCursor(0, 300);
             tft_setTextColor(ILI9340_YELLOW); tft_setTextSize(2);
             sprintf(buffer,"%X", receive);
             tft_writeString(buffer);
+            received = 0;
+            receive = 0;
+            nrf_flush_rx();
         }
     }
 }
