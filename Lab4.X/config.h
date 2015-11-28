@@ -8,7 +8,6 @@
 #ifndef CONFIG_H
 #define	CONFIG_H
 
-#include "plib.h"
 // serial stuff
 #include <stdio.h>
 

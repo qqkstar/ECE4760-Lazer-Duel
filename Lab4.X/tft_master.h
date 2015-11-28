@@ -21,7 +21,8 @@
   MIT license, all text above must be included in any redistribution
  ****************************************************/
 
-#include "plib.h"
+#define _SUPPRESS_PLIB_WARNING 1
+#include <plib.h>
 //#include <Adafruit_GFX.h>
 
 #define _dc         LATBbits.LATB0

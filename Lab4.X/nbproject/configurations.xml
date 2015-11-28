@@ -27,6 +27,7 @@
       <itemPath>LED_shift_reg.c</itemPath>
       <itemPath>gun.c</itemPath>
       <itemPath>cvref_sound.c</itemPath>
+      <itemPath>nrf24l01.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -45,7 +46,7 @@
         <targetDevice>PIC32MX250F128B</targetDevice>
         <targetHeader></targetHeader>
         <targetPluginBoard></targetPluginBoard>
-        <platformTool>PICkit3PlatformTool</platformTool>
+        <platformTool>PKOBSKDEPlatformTool</platformTool>
         <languageToolchain>XC32</languageToolchain>
         <languageToolchainVersion>1.40</languageToolchainVersion>
         <platform>3</platform>
@@ -261,7 +262,9 @@
         <C32Global>
         </C32Global>
       </item>
-      <item path="spitest.c" ex="true" overriding="false">
+      <item path="gun.c" ex="true" overriding="false">
+      </item>
+      <item path="spitest.c" ex="false" overriding="false">
         <C32>
         </C32>
         <C32-AR>

@@ -155,8 +155,7 @@ static PT_THREAD (protothread_timer(struct pt *pt))
               alive = 1;
               PT_YIELD_TIME_msec(20);
                 mINT0ClearIntFlag(); 
-              EnableINT0;
-                //mINT0ClearIntFlag(); 
+              EnableINT0; 
               //CVREFClose();
               //CVREFOpen(CVREF_DISABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
               CVRCON = 0;
@@ -260,33 +259,9 @@ void main(void) {
 
 void __ISR(_EXTERNAL_0_VECTOR, ipl2) INT0Interrupt() 
 { 
-//   static int cnt = 0;
-//   //Debounce
-//   while(cnt<100){
-//       if(mPORTBReadBits(RECEIVER) == 0){
-//           cnt++;
-//       }else{
-//           break;
-//       }
-//   }
-//   if(cnt == 100){
-//        alive = 0;
-//        lives = lives << 1;
-//        cnt = 0;
-//        while(cnt<100){
-//            if(mPORTBReadBits(RECEIVER)){
-//                cnt = cnt + 1;
-//            }else{
-//                cnt = 0;
-//            }
-//        }
-//            
-//   }else{
-//       alive = 1;
-//   }
-    alive = 0;
-    lives = lives << 1;
- 
+   alive = 0;
+   lives = lives << 1;
+   
    DisableINT0;
    mINT0ClearIntFlag(); 
        

@@ -1,8 +1,18 @@
+
+#define _SUPPRESS_PLIB_WARNING 1
+#include <plib.h>
+
 #define _csn         LATBbits.LATB7
 #define TRIS_csn     TRISBbits.TRISB7
 
 #define _ce         LATBbits.LATB8
 #define TRIS_ce     TRISBbits.TRISB8
+
+#define _LEDRED        LATAbits.LATA0
+#define _TRIS_LEDRED   TRISAbits.TRISA0
+
+#define _LEDYELLOW        LATBbits.LATB0
+#define _TRIS_LEDYELLOW   TRISBbits.TRISB0
 
 // SPI Commands
 #define nrf24l01_R_REGISTER		0x00
@@ -200,3 +210,81 @@
 // IRQ -> extern interrupt 1 (RPB10) (pin 21)
 // CSN -> RPB7 (I/O) (pin 16)
 // CE -> RPB6 (I/O) (pin 15)
+
+static char status;
+static char config;
+static char buffer[120];
+
+char RX_payload[32];
+char payload_size;
+
+int received; // goes high when message is received
+int sent; // goes high after radio finishes sending payload correctly
+int error; // goes high when no acknowledge is received
+
+int TX; // is it transmitter or receiver (0 is rx 1 is tx) 
+
+char rf_spiwrite(unsigned char c);
+
+void init_SPI();
+
+// Read a register from the nrf24l01
+// reg is the array to read, len is the length of data expected to be received (1-5 bytes)
+// NOTE: only address 0 and 1 registers use 5 bytes all others use 1 byte 
+// NOTE: writing or reading payload is done using a specific command
+void nrf_read_reg(char reg, char * buff, int len);
+
+
+void nrf_write_reg(char reg, char * data, char len);
+
+// flushes the tx FIFO
+void nrf_flush_tx();
+
+
+// flushes the rx FIFO
+// NOTE: do not use while sending acknowledge
+void nrf_flush_rx();
+
+
+// Write a payload to be sent over the radio
+// data: array of chars to be sent (1-32 chars/bytes)
+// len: amount of chars in array/bytes to be sent
+// NOT TESTED YET
+void nrf_write_payload(char * data, char len);
+
+// should read the payload into a buffer NOT TESTED YET
+void nrf_read_payload(char * buff);
+
+//Sets the power up bit and waits for the startup time, putting the radio in Standby-I mode
+void nrf_pwrup();
+
+//Clear the pwr_up bit, transitioning to power down mode
+void nrf_pwrdown();
+
+//Transitions to rx mode from standby mode
+void nrf_rx_mode();
+
+//Transitions to tx mode from standby mode
+void nrf_tx_mode();
+
+void nrf_standby_mode();
+
+
+// sets power of transmitter, possible values and definitions for them are
+//  0dBm: nrf24l01_RF_SETUP_RF_PWR_0
+// -6dBm: nrf24l01_RF_SETUP_RF_PWR_6
+// -12dBm: nrf24l01_RF_SETUP_RF_PWR_12
+// -18dBm: nrf24l01_RF_SETUP_RF_PWR_18
+void nrf_set_transmit_pwr(char power);
+
+// sets the rf data rate, possible values and definitoins for them are
+// 250 kbps: nrf24l01_DR_LOW
+// 1 Mbps: nrf24l01_DR_MED
+// 2 Mbps: nrf24l01_DR_HIGH
+void nrf_set_transmit_rate(char rate);
+
+// Sends out a specified payload (in auto acknowledge mode by default)
+// use after powering up radio, and setting address or other settings
+void nrf_send_payload(char * data, int len);
+
+

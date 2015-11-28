@@ -21,8 +21,6 @@
   Written by Limor Fried/Ladyada for Adafruit Industries.
   MIT license, all text above must be included in any redistribution
  ****************************************************/
-#define _SUPPRESS_PLIB_WARNING 1
-#include "plib.h"
 #include "tft_master.h"
 #include <xc.h>
 
