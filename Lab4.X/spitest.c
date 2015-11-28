@@ -29,7 +29,7 @@ int sys_time_seconds ;
 // SDO -> MOSI (RPB2) (pin 9)
 // IRQ -> extern interrupt 1 (RPB10) (pin 21)
 // CSN -> RPB7 (I/O) (pin 16)
-// CE -> RPB6 (I/O) (pin 15)
+// CE -> RPB8 (I/O) (pin 17)
 
 
 static char status;
@@ -294,7 +294,7 @@ while(1){
     // if transmitter
     if(TX){
         nrf_send_payload(&send, 1);
-        send = send*3;
+        send = send+1;
         delay_ms(1000); // wait a bit before sending it again
         _LEDYELLOW = 0;
         _LEDRED = 0;
