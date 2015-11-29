@@ -10,7 +10,7 @@
 // SDI -> MISO (RPA4) (pin 12)
 // SDO -> MOSI (RPB2) (pin 9)
 // IRQ -> extern interrupt 1 (RPB10) (pin 21)
-// CSN -> RPB7 (I/O) (pin 16)
+// CSN -> RPB9 (I/O) (pin 18)
 // CE -> RPB8 (I/O) (pin 17)
 // i/o names 
 
@@ -192,7 +192,7 @@ void nrf_send_payload(char * data, int len){
 }
 
 void __ISR(_EXTERNAL_1_VECTOR, ipl2) INT1Handler(void){
-    _LEDRED = 1;
+    //_LEDRED = 1;
     nrf_read_reg(nrf24l01_STATUS, &status, 1); // read the status register
     // check which type of interrupt occurred
     if (status & nrf24l01_STATUS_RX_DR){ // if data received
@@ -202,15 +202,16 @@ void __ISR(_EXTERNAL_1_VECTOR, ipl2) INT1Handler(void){
     }
     // if data sent or if acknowledge received when auto ack enabled
     else if(status & nrf24l01_STATUS_TX_DS){
-        _LEDYELLOW = 1;
+        //_LEDYELLOW = 1;
         sent = 1; // signal main code that payload was sent
         status |= nrf24l01_STATUS_TX_DS; // clear interrupt on radio
     }
     else{ // maximum number of retransmit attempts occurred
-        _LEDRED = 1;
+        //_LEDRED = 1;
         error = 1; // signal main code that the payload was not received
         status |= nrf24l01_STATUS_MAX_RT; // clear interrupt on radio
     }
     nrf_write_reg(nrf24l01_STATUS, &status, 1);
     mINT1ClearIntFlag();
 }
+

@@ -2,8 +2,8 @@
 #define _SUPPRESS_PLIB_WARNING 1
 #include <plib.h>
 
-#define _csn         LATBbits.LATB7
-#define TRIS_csn     TRISBbits.TRISB7
+#define _csn         LATBbits.LATB9
+#define TRIS_csn     TRISBbits.TRISB9
 
 #define _ce         LATBbits.LATB8
 #define TRIS_ce     TRISBbits.TRISB8
@@ -215,14 +215,14 @@ static char status;
 static char config;
 static char buffer[120];
 
-char RX_payload[32];
-char payload_size;
+static char RX_payload[32];
+static char payload_size;
 
-int received; // goes high when message is received
-int sent; // goes high after radio finishes sending payload correctly
-int error; // goes high when no acknowledge is received
+static int received; // goes high when message is received
+static int sent; // goes high after radio finishes sending payload correctly
+static int error; // goes high when no acknowledge is received
 
-int TX; // is it transmitter or receiver (0 is rx 1 is tx) 
+static int TX; // is it transmitter or receiver (0 is rx 1 is tx) 
 
 char rf_spiwrite(unsigned char c);
 

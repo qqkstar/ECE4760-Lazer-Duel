@@ -592,7 +592,7 @@ unsigned int time_tick_millsec ;
 
 // Timer 2 interrupt handler ///////
 // ipl2 means "interrupt priority level 2"
-void __ISR(_TIMER_1_VECTOR, ipl2) Timer1Handler(void)
+void __ISR(_TIMER_1_VECTOR, ipl3) Timer1Handler(void)
 {
     // clear the interrupt flag
     mT1ClearIntFlag();
@@ -637,9 +637,9 @@ void PT_setup (void)
   // ticks once/microsec!
   // set up to count millsec 40 MHz/32 = 1.25 MHz or 0.8 microsec per tick so
   // 1250 x 0.8 = 1 mSec
-  OpenTimer1(T1_ON  | T1_SOURCE_INT | T5_PS_1_64 , 1000); //1250); 1999 => 64 MHz
+  OpenTimer1(T1_ON  | T1_SOURCE_INT | T1_PS_1_64 , 1000); //1250); 1999 => 64 MHz
   // set up the timer interrupt with a priority of 2
-  ConfigIntTimer1(T1_INT_ON | T1_INT_PRIOR_2);
+  ConfigIntTimer1(T1_INT_ON | T1_INT_PRIOR_3);
   mT1ClearIntFlag(); // and clear the interrupt flag
   // zero the system time tick
   time_tick_millsec = 0;
