@@ -50,6 +50,7 @@ volatile unsigned char sine_table[256];
 static struct pt pt_timer, pt_radio;
 
 volatile static int lives = 0xFF;
+volatile static int life_cnt = 8;
 
 static char send;
 static char receive;
@@ -270,26 +271,25 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
 
 static PT_THREAD(protothread_radio(struct pt *pt)) {
     PT_BEGIN(pt);
-    mPORTBSetPinsDigitalOut(SHOOT_LED | LIFE_LED); //Shoot and life LEDs
     while (1) {
         TX = 1;
         // if transmitter
         //PT_YIELD_TIME_msec(100);
         if (TX) {
             while(1){
-            mPORTBSetBits(LIFE_LED);
-            nrf_send_payload(&send, 1);
+
+            nrf_send_payload(&life_cnt, 1);
              
             send = send + 1;
             //delay_ms(1000); // wait a bit before sending it again
             PT_YIELD_TIME_msec(1000);
-           mPORTBClearBits(LIFE_LED);
+     
            }
     
         } else {
             nrf_rx_mode();
             while (1) {
-                mPORTBSetBits(SHOOT_LED);
+                
                 PT_YIELD_TIME_msec(1000);
                 receive = RX_payload[0];
                 if (received == 1) {
@@ -327,12 +327,12 @@ void main(void) {
     PT_setup();
   
    
-    //PT_INIT(&pt_timer);
+    PT_INIT(&pt_timer);
     PT_INIT(&pt_radio);
     TRISBbits.TRISB4 = 0;
     
     radioSetup();
-    //gunSetup();
+    gunSetup();
    
     //tft_init_hw();
     //tft_begin();
@@ -344,7 +344,7 @@ void main(void) {
     TX = 1;
     
     while (1) {
-        //PT_SCHEDULE(protothread_timer(&pt_timer));
+        PT_SCHEDULE(protothread_timer(&pt_timer));
         PT_SCHEDULE(protothread_radio(&pt_radio));
     }
 } // main
@@ -354,7 +354,8 @@ void main(void) {
 void __ISR(_EXTERNAL_0_VECTOR, ipl2) INT0Interrupt(){
     alive = 0;
     lives = lives << 1;
-
+    life_cnt--;
+    
     DisableINT0;
     mINT0ClearIntFlag();
 

@@ -602,35 +602,6 @@ void __ISR(_TIMER_1_VECTOR, ipl2) Timer1Handler(void)
 
 void PT_setup (void)
 {
-  // Configure the device for maximum performance but do not change the PBDIV
-    // Given the options, this function will change the flash wait states, RAM
-    // wait state and enable prefetch cache but will not change the PBDIV.
-    // The PBDIV value is already set via the pragma FPBDIV option above..
-    //SYSTEMConfig(SYS_FREQ, SYS_CFG_WAIT_STATES | SYS_CFG_PCACHE);
-
-  // === init the USART i/o pins =========
-  //PPSInput (2, U2RX, RPB11); //Assign U2RX to pin RPB11 -- Physical pin 22 on 28 PDIP
-  //PPSOutput(4, RPB10, U2TX); //Assign U2TX to pin RPB10 -- Physical pin 21 on 28 PDIP
-  //ANSELA =0; //make sure analog is cleared
-  //ANSELB =0;
-  // === init the uart2 ===================
-  
- // UARTConfigure(UART2, UART_ENABLE_PINS_TX_RX_ONLY);
-  //UARTSetLineControl(UART2, UART_DATA_SIZE_8_BITS | UART_PARITY_NONE | UART_STOP_BITS_1);
-  //UARTSetDataRate(UART2, PB_FREQ, BAUDRATE);
-  //UARTEnable(UART2, UART_ENABLE_FLAGS(UART_PERIPHERAL | UART_RX | UART_TX));
-  //printf("\n\r..protothreads start..\n\r");
-  // === set up DMA for UART output =========
-  // configure the channel and enable end-on-match
-  //DmaChnOpen(DMA_CHANNEL1, DMA_CHN_PRI2, DMA_OPEN_MATCH);
-  // trigger a byte everytime the UART is empty
-  //DmaChnSetEventControl(DMA_CHANNEL1, DMA_EV_START_IRQ_EN|DMA_EV_MATCH_EN|DMA_EV_START_IRQ(_UART2_TX_IRQ));
-  // source and destination
-  //DmaChnSetTxfer(DMA_CHANNEL1, PT_send_buffer+1, (void*)&U2TXREG, max_chars, 1, 1);
-  // signal when done
-  //DmaChnSetEvEnableFlags(DMA_CHANNEL1, DMA_EV_BLOCK_DONE);
-  // set null as ending character (of a string)
-  //DmaChnSetMatchPattern(DMA_CHANNEL1, 0x00);
 
   // ===Set up timer5 ======================
   // timer 5: on,  interrupts, internal clock, prescalar 32,
@@ -644,16 +615,5 @@ void PT_setup (void)
   // zero the system time tick
   time_tick_millsec = 0;
 
-  //=== Set up VREF as a debugger output =======
-  // set up the Vref pin and use as a DAC
-  // enable module| eanble output | use low range output | use internal reference | desired step
-  //CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
-  // And read back setup from CVRCON for speed later
-  // 0x8060 is enabled with output enabled, Vdd ref, and 0-0.6(Vdd) range
-  //CVRCON_setup = CVRCON; //CVRCON = 0x8060 from Tahmid http://tahmidmc.blogspot.com/
-
-  // setup system wide interrupts
-  // IF you need them for some other service besides ProtoThreads
-  //INTEnableSystemMultiVectoredInt();
 
 }
