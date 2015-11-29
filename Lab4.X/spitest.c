@@ -26,20 +26,11 @@
 static char send; // 5 byte address for testing
 static char receive; // data read from the address
 
-#define _LEDRED        LATAbits.LATA0
-#define _TRIS_LEDRED   TRISAbits.TRISA0
-
-#define _LEDYELLOW        LATBbits.LATB0
-#define _TRIS_LEDYELLOW   TRISBbits.TRISB0
-
 
 int main(void) {
-    TX = 1;
+    TX = 0;
     send = 0xBB;
     INTEnableSystemMultiVectoredInt();
-
-
-
     // Set outputs to CE and CSN
     TRIS_csn = 0;
     TRIS_ce = 0;
@@ -51,6 +42,10 @@ int main(void) {
     //240x320 vertical display
     tft_setRotation(0); // Use tft_setRotation(1) for 320x240
 
+    tft_setCursor(0, 60);
+    tft_setTextColor(ILI9340_MAGENTA);
+    tft_setTextSize(2);
+    tft_writeString("Start");
     // write the 5 byte address to pipe 1
     nrf_pwrup(); //Go to standby
 
@@ -64,31 +59,33 @@ int main(void) {
     nrf_write_reg(nrf24l01_RX_PW_P5, &payload_size, 1);
 
     // Disable auto ack
-    char disable_ack = nrf24l01_EN_AA_ENAA_NONE;
+    //char disable_ack = nrf24l01_EN_AA_ENAA_NONE;
     //nrf_write_reg(nrf24l01_EN_AA, &disable_ack, 1);
 
-    _TRIS_LEDRED = 0;
-    _TRIS_LEDYELLOW = 0;
-    _LEDRED = 0;
-    _LEDYELLOW = 0;
+    //_TRIS_LEDRED = 0;
+    //_TRIS_LEDYELLOW = 0;
+    //_LEDRED = 0;
+    //_LEDYELLOW = 0;
     nrf_flush_rx();
+   
     while (1) {
         // if transmitter
         if (TX) {
             nrf_send_payload(&send, 1);
             send = send + 1;
             delay_ms(1000); // wait a bit before sending it again
-            _LEDYELLOW = 0;
-            _LEDRED = 0;
+            //_LEDYELLOW = 0;
+            //_LEDRED = 0;
             delay_ms(1000);
         } else {
             nrf_rx_mode();
             while (1) {
+           
                 receive = RX_payload[0];
                 //nrf_flush_rx();
                 if (received == 1) {
                     tft_fillScreen(ILI9340_BLACK);
-                    _LEDRED = 0;
+                    //_LEDRED = 0;
 
                     delay_ms(1000);
                     tft_setCursor(0, 60);

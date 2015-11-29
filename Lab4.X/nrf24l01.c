@@ -196,7 +196,7 @@ void __ISR(_EXTERNAL_1_VECTOR, ipl2) INT1Handler(void){
     nrf_read_reg(nrf24l01_STATUS, &status, 1); // read the status register
     // check which type of interrupt occurred
     if (status & nrf24l01_STATUS_RX_DR){ // if data received
-        nrf_read_payload((char *)&RX_payload);
+        nrf_read_payload(&RX_payload);
         received = 1; // signal main code that payload was received
         status |= nrf24l01_STATUS_RX_DR; // clear interrupt on radio
     }

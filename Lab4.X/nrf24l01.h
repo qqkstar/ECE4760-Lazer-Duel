@@ -211,18 +211,31 @@
 // CSN -> RPB7 (I/O) (pin 16)
 // CE -> RPB6 (I/O) (pin 15)
 
-static char status;
-static char config;
-static char buffer[120];
+//static char status;
+//static char config;
+//static char buffer[120];
+//
+//volatile static char RX_payload[32];
+//static char payload_size;
+//
+//volatile static int received; // goes high when message is received
+//volatile static int sent; // goes high after radio finishes sending payload correctly
+//volatile static int error; // goes high when no acknowledge is received
+//
+//static int TX; // is it transmitter or receiver (0 is rx 1 is tx) 
 
-static char RX_payload[32];
-static char payload_size;
+char status;
+char config;
+char buffer[120];
 
-static int received; // goes high when message is received
-static int sent; // goes high after radio finishes sending payload correctly
-static int error; // goes high when no acknowledge is received
+volatile char RX_payload[32];
+char payload_size;
 
-static int TX; // is it transmitter or receiver (0 is rx 1 is tx) 
+volatile int received; // goes high when message is received
+volatile int sent; // goes high after radio finishes sending payload correctly
+volatile int error; // goes high when no acknowledge is received
+
+int TX; // is it transmitter or receiver (0 is rx 1 is tx) 
 
 char rf_spiwrite(unsigned char c);
 
