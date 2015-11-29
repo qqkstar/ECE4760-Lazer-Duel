@@ -45,17 +45,17 @@ OBJECTDIR=build/${CND_CONF}/${IMAGE_TYPE}
 DISTDIR=dist/${CND_CONF}/${IMAGE_TYPE}
 
 # Source Files Quoted if spaced
-SOURCEFILES_QUOTED_IF_SPACED=tft_master.c tft_gfx.c glcdfont.c spitest.c nrf24l01.c
+SOURCEFILES_QUOTED_IF_SPACED=tft_master.c tft_gfx.c glcdfont.c nrf24l01.c basestation.c
 
 # Object Files Quoted if spaced
-OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/tft_master.o ${OBJECTDIR}/tft_gfx.o ${OBJECTDIR}/glcdfont.o ${OBJECTDIR}/spitest.o ${OBJECTDIR}/nrf24l01.o
-POSSIBLE_DEPFILES=${OBJECTDIR}/tft_master.o.d ${OBJECTDIR}/tft_gfx.o.d ${OBJECTDIR}/glcdfont.o.d ${OBJECTDIR}/spitest.o.d ${OBJECTDIR}/nrf24l01.o.d
+OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/tft_master.o ${OBJECTDIR}/tft_gfx.o ${OBJECTDIR}/glcdfont.o ${OBJECTDIR}/nrf24l01.o ${OBJECTDIR}/basestation.o
+POSSIBLE_DEPFILES=${OBJECTDIR}/tft_master.o.d ${OBJECTDIR}/tft_gfx.o.d ${OBJECTDIR}/glcdfont.o.d ${OBJECTDIR}/nrf24l01.o.d ${OBJECTDIR}/basestation.o.d
 
 # Object Files
-OBJECTFILES=${OBJECTDIR}/tft_master.o ${OBJECTDIR}/tft_gfx.o ${OBJECTDIR}/glcdfont.o ${OBJECTDIR}/spitest.o ${OBJECTDIR}/nrf24l01.o
+OBJECTFILES=${OBJECTDIR}/tft_master.o ${OBJECTDIR}/tft_gfx.o ${OBJECTDIR}/glcdfont.o ${OBJECTDIR}/nrf24l01.o ${OBJECTDIR}/basestation.o
 
 # Source Files
-SOURCEFILES=tft_master.c tft_gfx.c glcdfont.c spitest.c nrf24l01.c
+SOURCEFILES=tft_master.c tft_gfx.c glcdfont.c nrf24l01.c basestation.c
 
 
 CFLAGS=
@@ -112,17 +112,17 @@ ${OBJECTDIR}/glcdfont.o: glcdfont.c  nbproject/Makefile-${CND_CONF}.mk
 	@${RM} ${OBJECTDIR}/glcdfont.o 
 	@${FIXDEPS} "${OBJECTDIR}/glcdfont.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/glcdfont.o.d" -o ${OBJECTDIR}/glcdfont.o glcdfont.c   
 	
-${OBJECTDIR}/spitest.o: spitest.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
-	@${RM} ${OBJECTDIR}/spitest.o.d 
-	@${RM} ${OBJECTDIR}/spitest.o 
-	@${FIXDEPS} "${OBJECTDIR}/spitest.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/spitest.o.d" -o ${OBJECTDIR}/spitest.o spitest.c   
-	
 ${OBJECTDIR}/nrf24l01.o: nrf24l01.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/nrf24l01.o.d 
 	@${RM} ${OBJECTDIR}/nrf24l01.o 
 	@${FIXDEPS} "${OBJECTDIR}/nrf24l01.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/nrf24l01.o.d" -o ${OBJECTDIR}/nrf24l01.o nrf24l01.c   
+	
+${OBJECTDIR}/basestation.o: basestation.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/basestation.o.d 
+	@${RM} ${OBJECTDIR}/basestation.o 
+	@${FIXDEPS} "${OBJECTDIR}/basestation.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/basestation.o.d" -o ${OBJECTDIR}/basestation.o basestation.c   
 	
 else
 ${OBJECTDIR}/tft_master.o: tft_master.c  nbproject/Makefile-${CND_CONF}.mk
@@ -143,17 +143,17 @@ ${OBJECTDIR}/glcdfont.o: glcdfont.c  nbproject/Makefile-${CND_CONF}.mk
 	@${RM} ${OBJECTDIR}/glcdfont.o 
 	@${FIXDEPS} "${OBJECTDIR}/glcdfont.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/glcdfont.o.d" -o ${OBJECTDIR}/glcdfont.o glcdfont.c   
 	
-${OBJECTDIR}/spitest.o: spitest.c  nbproject/Makefile-${CND_CONF}.mk
-	@${MKDIR} "${OBJECTDIR}" 
-	@${RM} ${OBJECTDIR}/spitest.o.d 
-	@${RM} ${OBJECTDIR}/spitest.o 
-	@${FIXDEPS} "${OBJECTDIR}/spitest.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/spitest.o.d" -o ${OBJECTDIR}/spitest.o spitest.c   
-	
 ${OBJECTDIR}/nrf24l01.o: nrf24l01.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}" 
 	@${RM} ${OBJECTDIR}/nrf24l01.o.d 
 	@${RM} ${OBJECTDIR}/nrf24l01.o 
 	@${FIXDEPS} "${OBJECTDIR}/nrf24l01.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/nrf24l01.o.d" -o ${OBJECTDIR}/nrf24l01.o nrf24l01.c   
+	
+${OBJECTDIR}/basestation.o: basestation.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/basestation.o.d 
+	@${RM} ${OBJECTDIR}/basestation.o 
+	@${FIXDEPS} "${OBJECTDIR}/basestation.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -MMD -MF "${OBJECTDIR}/basestation.o.d" -o ${OBJECTDIR}/basestation.o basestation.c   
 	
 endif
 

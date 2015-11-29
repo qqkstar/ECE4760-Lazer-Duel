@@ -35,8 +35,8 @@ volatile unsigned char sine_table[256];
 // note that UART input and output are threads
 static struct pt pt_radio;
 
-static char send;
-static char receive;
+char send;
+char receive;
 
 // Play game over sound
 
