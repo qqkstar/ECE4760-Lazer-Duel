@@ -1,8 +1,8 @@
 
 // graphics libraries
 #include "config.h"
-#include "tft_master.h"
 #include "tft_gfx.h"
+#include "tft_master.h"
 // need for rand function
 #include <stdlib.h>
 // serial stuff
@@ -270,37 +270,44 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
 
 static PT_THREAD(protothread_radio(struct pt *pt)) {
     PT_BEGIN(pt);
+    mPORTBSetPinsDigitalOut(SHOOT_LED | LIFE_LED); //Shoot and life LEDs
     while (1) {
         TX = 1;
         // if transmitter
         //PT_YIELD_TIME_msec(100);
         if (TX) {
+            while(1){
+            mPORTBSetBits(LIFE_LED);
             nrf_send_payload(&send, 1);
+             
             send = send + 1;
             //delay_ms(1000); // wait a bit before sending it again
             PT_YIELD_TIME_msec(1000);
+           mPORTBClearBits(LIFE_LED);
+           }
     
         } else {
             nrf_rx_mode();
             while (1) {
+                mPORTBSetBits(SHOOT_LED);
                 PT_YIELD_TIME_msec(1000);
                 receive = RX_payload[0];
                 if (received == 1) {
-                    tft_fillScreen(ILI9340_BLACK);
+                    //tft_fillScreen(ILI9340_BLACK);
                     //_LEDRED = 0;
 
                     //delay_ms(1000);
                      PT_YIELD_TIME_msec(200);
-                    tft_setCursor(0, 60);
-                    tft_setTextColor(ILI9340_MAGENTA);
-                    tft_setTextSize(2);
-                    tft_writeString("Sent");
+                    //tft_setCursor(0, 60);
+                    //tft_setTextColor(ILI9340_MAGENTA);
+                    //tft_setTextSize(2);
+                    //tft_writeString("Sent");
                     nrf_read_reg(nrf24l01_STATUS, &status, 1);
-                    tft_setCursor(0, 300);
-                    tft_setTextColor(ILI9340_YELLOW);
-                    tft_setTextSize(2);
-                    sprintf(buffer, "%X", receive);
-                    tft_writeString(buffer);
+                    //tft_setCursor(0, 300);
+                    //tft_setTextColor(ILI9340_YELLOW);
+                    //tft_setTextSize(2);
+                    //sprintf(buffer, "%X", receive);
+                    //tft_writeString(buffer);
                     received = 0;
                     receive = 0;
                     nrf_flush_rx();
@@ -325,13 +332,13 @@ void main(void) {
     TRISBbits.TRISB4 = 0;
     
     radioSetup();
-    gunSetup();
+    //gunSetup();
    
-    tft_init_hw();
-    tft_begin();
-    tft_fillScreen(ILI9340_BLACK);
+    //tft_init_hw();
+    //tft_begin();
+    //tft_fillScreen(ILI9340_BLACK);
     //240x320 vertical display
-    tft_setRotation(0); // Use tft_setRotation(1) for 320x240
+    //tft_setRotation(0); // Use tft_setRotation(1) for 320x240
     
     send = 0xBB;
     TX = 1;
