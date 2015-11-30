@@ -325,7 +325,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 msg = ((id << 6) | life_cnt);
                 nrf_send_payload(&msg, 1);
                 send = send + 1;
-                PT_YIELD_TIME_msec(10);
+                PT_YIELD_TIME_msec(2000);
             
         }
     }
