@@ -58,6 +58,7 @@ static char ticket;
 static char msg;
 static int joined = 0;
 static char id = 1; 
+static char idle = 1; 
 
 void SPI_setup() {
     TRISBbits.TRISB5 = 0; // configure pin RB as an output  
@@ -225,48 +226,57 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
     PT_BEGIN(pt);
 
     while (1) {
-
-        //Trigger pressed, fire IR
-        if (alive == 1) {
-            if (mPORTAReadBits(BIT_1)) {
-                OC1RS = 842;
-                mPORTBSetBits(SHOOT_LED);
-                CVREFOpen(CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0);
-                playSound1();
-                PT_YIELD_TIME_msec(100);
-                OC1RS = 0;
-                mPORTBClearBits(SHOOT_LED);
-                //CVREFOpen(CVREF_DISABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
-                //CVREFClose();
-                CVRCON = 0;
-                PT_YIELD_TIME_msec(200);//Needed for if we want to shoot oursleves for testing...
-
-            } else {
-                OC1RS = 0;
-                PT_YIELD_TIME_msec(10);
-            }
-        } else {
+        while(idle){
             mPORTBClearBits(LIFE_LED);
-            CVRCON = 0;
-            PT_YIELD_TIME_msec(10);
-            SPI1_transfer(lives);
-            CVREFOpen(CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0);
-            playSound2();
+            if (mPORTAReadBits(BIT_1)) {
+                idle = 0;
+            }
+        }
+        
+        if(joined){
+            //Trigger pressed, fire IR
+            if (alive == 1) {
+                if (mPORTAReadBits(BIT_1)) {
+                    OC1RS = 842;
+                    mPORTBSetBits(SHOOT_LED);
+                    CVREFOpen(CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0);
+                    playSound1();
+                    PT_YIELD_TIME_msec(100);
+                    OC1RS = 0;
+                    mPORTBClearBits(SHOOT_LED);
+                    //CVREFOpen(CVREF_DISABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
+                    //CVREFClose();
+                    CVRCON = 0;
+                    PT_YIELD_TIME_msec(200);//Needed for if we want to shoot oursleves for testing...
 
-            PT_YIELD_TIME_msec(2000);
-            playSound3();
+                } else {
+                    OC1RS = 0;
+                    PT_YIELD_TIME_msec(10);
+                }
+            } else {
+                mPORTBClearBits(LIFE_LED);
+                CVRCON = 0;
+                PT_YIELD_TIME_msec(10);
+                SPI1_transfer(lives);
+                CVREFOpen(CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0);
+                playSound2();
+
+                PT_YIELD_TIME_msec(2000);
+                playSound3();
+                PT_YIELD_TIME_msec(200);
+                mPORTBSetBits(LIFE_LED);
+                alive = 1;
+                PT_YIELD_TIME_msec(20);
+                mINT0ClearIntFlag();
+                EnableINT0;
+                //CVREFClose();
+                //CVREFOpen(CVREF_DISABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
+                CVRCON = 0;
+                PT_YIELD_TIME_msec(100);
+
+            }
+        }else{
             PT_YIELD_TIME_msec(200);
-            mPORTBSetBits(LIFE_LED);
-            alive = 1;
-            PT_YIELD_TIME_msec(20);
-            mINT0ClearIntFlag();
-            EnableINT0;
-            //CVREFClose();
-            //CVREFOpen(CVREF_DISABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
-            CVRCON = 0;
-            PT_YIELD_TIME_msec(100);
-
-
         }
 
     } // END WHILE(1)
@@ -318,33 +328,6 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 PT_YIELD_TIME_msec(10);
             
         }
-//        TX = 1;
-//        if (TX) {
-//            while(1){
-//                msg = ((id << 6) | life_cnt);
-//                nrf_send_payload(&msg, 1);
-//                send = send + 1;
-//                PT_YIELD_TIME_msec(1000);
-//            
-//           }
-//    
-//        } else {
-//            nrf_rx_mode();
-//            while (1) {
-//                
-//                PT_YIELD_TIME_msec(1000);
-//                receive = RX_payload[0];
-//                if (received == 1) {
-//                     PT_YIELD_TIME_msec(200);         
-//                    nrf_read_reg(nrf24l01_STATUS, &status, 1);
-//                    received = 0;
-//                    receive = 0;
-//                    nrf_flush_rx();
-//                }else{
-//                     PT_YIELD_TIME_msec(100);
-//                }
-//            }
-//        }
     }
     PT_END(pt);
 } // timer thread
@@ -362,12 +345,6 @@ void main(void) {
     
     radioSetup();
     gunSetup();
-   
-    //tft_init_hw();
-    //tft_begin();
-    //tft_fillScreen(ILI9340_BLACK);
-    //240x320 vertical display
-    //tft_setRotation(0); // Use tft_setRotation(1) for 320x240
     
     send = 0xBB;
     TX = 1;
