@@ -49,11 +49,15 @@ volatile unsigned char sine_table[256];
 // note that UART input and output are threads
 static struct pt pt_timer, pt_radio;
 
-volatile static int lives = 0xFF;
-volatile static int life_cnt = 8;
+volatile static char lives = 0xFF;
+volatile static char life_cnt = 8;
 
 static char send;
 static char receive;
+static char ticket;
+static char msg;
+static int joined = 0;
+static char id = 1; 
 
 void SPI_setup() {
     TRISBbits.TRISB5 = 0; // configure pin RB as an output  
@@ -272,18 +276,32 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
 static PT_THREAD(protothread_radio(struct pt *pt)) {
     PT_BEGIN(pt);
     while (1) {
+        //Joining state
+        while(!joined){
+            ticket = (id << 6);
+            nrf_send_payload(&ticket, 1);
+            send = send + 1;
+            nrf_rx_mode();
+            PT_YIELD_TIME_msec(100);
+            receive = RX_payload[0];
+            if (received == 1) {         
+                nrf_read_reg(nrf24l01_STATUS, &status, 1);
+                received = 0;
+                if((receive >> 6) == id){
+                    joined = 1;
+                }
+                nrf_flush_rx();
+            }
+        }
+        
         TX = 1;
-        // if transmitter
-        //PT_YIELD_TIME_msec(100);
         if (TX) {
             while(1){
-
-            nrf_send_payload(&life_cnt, 1);
-             
-            send = send + 1;
-            //delay_ms(1000); // wait a bit before sending it again
-            PT_YIELD_TIME_msec(1000);
-     
+                msg = ((id << 6) | life_cnt);
+                nrf_send_payload(&msg, 1);
+                send = send + 1;
+                PT_YIELD_TIME_msec(1000);
+            
            }
     
         } else {
@@ -293,21 +311,8 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 PT_YIELD_TIME_msec(1000);
                 receive = RX_payload[0];
                 if (received == 1) {
-                    //tft_fillScreen(ILI9340_BLACK);
-                    //_LEDRED = 0;
-
-                    //delay_ms(1000);
-                     PT_YIELD_TIME_msec(200);
-                    //tft_setCursor(0, 60);
-                    //tft_setTextColor(ILI9340_MAGENTA);
-                    //tft_setTextSize(2);
-                    //tft_writeString("Sent");
+                     PT_YIELD_TIME_msec(200);         
                     nrf_read_reg(nrf24l01_STATUS, &status, 1);
-                    //tft_setCursor(0, 300);
-                    //tft_setTextColor(ILI9340_YELLOW);
-                    //tft_setTextSize(2);
-                    //sprintf(buffer, "%X", receive);
-                    //tft_writeString(buffer);
                     received = 0;
                     receive = 0;
                     nrf_flush_rx();
