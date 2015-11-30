@@ -183,45 +183,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 PT_YIELD_TIME_msec(2);
                
             }
-        }
-        // if transmitter
-        //PT_YIELD_TIME_msec(100);
-        if (TX) {
-            PT_YIELD_TIME_msec(1000);
-     
-        } else {
-            nrf_rx_mode();
-            while (1) {
-                //LATAbits.LATA0 = 1;
-                PT_YIELD_TIME_msec(1000);
-                
-                receive = RX_payload[0];
-                if (received) {
-                    //LATAbits.LATA0 = 0;
-                    tft_fillScreen(ILI9340_BLACK);
-                    //_LEDRED = 0;
-
-                     PT_YIELD_TIME_msec(200);
-                    tft_setCursor(0, 60);
-                    tft_setTextColor(ILI9340_MAGENTA);
-                    tft_setTextSize(2);
-                    tft_writeString("Sent");
-                    nrf_read_reg(nrf24l01_STATUS, &status, 1);
-                    tft_setCursor(0, 300);
-                    tft_setTextColor(ILI9340_YELLOW);
-                    tft_setTextSize(2);
-                    
-                 
-                    sprintf(buffer, "%X", receive);
-                    tft_writeString(buffer);
-                    received = 0;
-                    receive = 0;
-                    nrf_flush_rx();
-                }else{
-                     PT_YIELD_TIME_msec(100);
-                }
-            }
-        }
+        }    
     }
     PT_END(pt);
 } // timer thread
