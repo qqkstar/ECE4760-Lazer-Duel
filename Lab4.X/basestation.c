@@ -48,9 +48,8 @@ int count; // debounce counter
 
 volatile int button_press = 0; // goes high after button was pressed
 
-int state; // state the game is currently in
+int state = 0; // state the game is currently in
 
-int open = 1;
 char curr_id = 0;
 char curr_code = 0;
 char curr_pay = 0;
@@ -142,6 +141,73 @@ void radioSetup(){
    
 }
 
+// Displays all players' health on TFT
+void displayScoreBoard(){
+    for(i=0;i<players;i++){
+        tft_setCursor(0, 80+i*20);
+        tft_setTextColor(ILI9340_YELLOW);
+        tft_setTextSize(2);
+        sprintf(buffer, "%s", "Player ");
+        tft_writeString(buffer);
+
+        tft_setCursor(80, 80+i*20);
+        tft_setTextColor(ILI9340_YELLOW);
+        tft_setTextSize(2);
+        sprintf(buffer, "%d", player_ids[i]);
+        tft_writeString(buffer);
+
+        tft_setCursor(85, 80+i*20);
+        tft_setTextColor(ILI9340_YELLOW);
+        tft_setTextSize(2);
+        sprintf(buffer, "%s", ": ");
+        tft_writeString(buffer);
+
+        tft_setCursor(100, 80+i*20);
+        tft_setTextColor(ILI9340_RED);
+        tft_setTextSize(2);
+        sprintf(buffer, "%d", player_health[i]);
+        tft_writeString(buffer);
+
+    }
+}
+
+// signal players that game has ended
+void sendEndGame(){
+    for(i=0;i<players;i++){
+        msg = (player_ids[i] << 6) | (0x11 << 4) | (player_health[i]); // signal each player that the game has ended
+        // send the message
+        nrf_pwrup();
+        delay_ms(2);
+        nrf_send_payload(&msg, 1);
+        delay_ms(2);
+        nrf_pwrdown();
+        delay_ms(2);
+    }
+}
+
+// Resets variables for next game
+void reset(){
+    curr_id = 0;
+    curr_code = 0;
+    curr_pay = 0;
+
+    for(i=0;i<4;i++){
+        player_ids[i] = 0;
+        player_health[i] = 0;
+    }
+    players = 0; // number of players in game
+    joined = 0; // flag to signal if player is already in game
+
+    msg = 0;
+    send = 0;
+    receive = 0;
+    received = 0;
+    
+    i = 0; // loop variable;
+    count = 0; // debounce counter
+    nrf_pwrdown();
+}
+
 // button was pressed
 void __ISR(_EXTERNAL_0_VECTOR, ipl2) INT0Interrupt(){
    while(mPORTBReadBits(BIT_7)){
@@ -161,7 +227,6 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
     PT_BEGIN(pt);
     while (1) {
         while(state == IDLE_STATE){ // reset state
-            tft_fillScreen(ILI9340_BLACK);
             tft_setCursor(0, 160);
             tft_setTextColor(ILI9340_BLUE);
             tft_setTextSize(2);
@@ -258,32 +323,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 PT_YIELD_TIME_msec(2);
                 
                 // display players
-                for(i=0;i<players;i++){
-                    tft_setCursor(0, 80+i*20);
-                    tft_setTextColor(ILI9340_CYAN);
-                    tft_setTextSize(2);
-                    sprintf(buffer, "%s", "Player ");
-                    tft_writeString(buffer);
-                    
-                    tft_setCursor(80, 80+i*20);
-                    tft_setTextColor(ILI9340_CYAN);
-                    tft_setTextSize(2);
-                    sprintf(buffer, "%d", player_ids[i]);
-                    tft_writeString(buffer);
-                    
-                    tft_setCursor(90, 80+i*20);
-                    tft_setTextColor(ILI9340_CYAN);
-                    tft_setTextSize(2);
-                    sprintf(buffer, "%s", ": ");
-                    tft_writeString(buffer);
-                    
-                    tft_setCursor(100, 80+i*20);
-                    tft_setTextColor(ILI9340_CYAN);
-                    tft_setTextSize(2);
-                    sprintf(buffer, "%d", player_health[i]);
-                    tft_writeString(buffer);
-                    
-                }
+                displayScoreBoard();
                
             }
             if(button_press == 1){ // if button was pressed go to play state
@@ -313,9 +353,38 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
             sprintf(buffer, "%d", state);
             tft_writeString(buffer);
             
+            // put radio in receive mode periodically
+            nrf_pwrup();
+            PT_YIELD_TIME_msec(2);
+            nrf_rx_mode();
+            PT_YIELD_TIME_msec(50);
+            nrf_pwrdown();
+            PT_YIELD_TIME_msec(2);
+            
+            while(received){ // when data has been received
+                receive = RX_payload[0]; // interpret payload
+                curr_id = (receive & 0xC0) >> 6;
+                curr_code = (receive & 0x30) >> 4;
+                curr_pay = (receive & 0x0F);
+                
+                if(curr_code == 10){ // if the data is how much life a player has
+                    for(i=1;i<players;i++){
+                        if(player_ids[i] == curr_id){ // determine which player sent the payload 
+                            player_health[i] = curr_pay;
+                        }
+                    }
+                }
+                // reset flags
+                received = 0;
+                receive = 0;
+                displayScoreBoard(); // display updated health of players
+            }            
+            
             if(button_press == 1){
                 button_press = 0;
+                sendEndGame(); // signal the end of the game to all guns
                 tft_fillScreen(ILI9340_BLACK);
+                displayScoreBoard();
                 state = END_STATE;
                 
             }
@@ -334,8 +403,11 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
             sprintf(buffer, "%d", state);
             tft_writeString(buffer);
             
+            // signal the end of the game repeatedly incase a gun did not receive the message
+            sendEndGame();
             if(button_press == 1){
                 button_press = 0;
+                reset(); // reset all variables for next game
                 tft_fillScreen(ILI9340_BLACK);
                 state = IDLE_STATE;
             }
