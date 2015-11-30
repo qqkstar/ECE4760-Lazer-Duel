@@ -58,6 +58,7 @@ char curr_pay = 0;
 char player_ids[4]; // array of player IDs
 int players = 0; // number of players in game
 int joined; // flag to signal if player is already in game
+char player_health[4];
 
 char msg = 0;
 
@@ -185,10 +186,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
             PT_YIELD_TIME_msec(50);
             nrf_pwrdown();
             PT_YIELD_TIME_msec(2);
-            receive = RX_payload[0];
-            curr_id = (receive & 0xC0) >> 6;
-            curr_code = (receive & 0x30) >> 4;
-            curr_pay = (receive & 0x0F);
+            
             
             if (received) {
                 
@@ -226,19 +224,23 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
 //                sprintf(buffer, "%X", curr_pay);
 //                tft_writeString(buffer);
 
-                
+                receive = RX_payload[0];
+                curr_id = (receive & 0xC0) >> 6;
+                curr_code = (receive & 0x30) >> 4;
+                curr_pay = (receive & 0x0F);
                 //PT_YIELD_TIME_msec(1000);
                  
                 receive = 0;
                 for(i=0;i<4;i++){
-                    if(curr_id == player_ids[i]){ // check if player has already joined game
+                    if((curr_id == player_ids[i]) && (curr_id != 0)){ // check if player has already joined game
                         joined = 1;
                     }  
                 }
                 if(!joined){ // if the player has not already joined the game
                     for(i=0;i<4;i++){
                         if(player_ids[i] == 0){
-                            player_ids[i] == curr_id; // put new id in array
+                            player_ids[i] = curr_id; // put new id in array
+                            player_health[i] = 8;
                             players += 1; // keep count of players in game
                             break;
                         }
@@ -247,7 +249,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 
                 joined = 0;
                 msg = (curr_id << 6) | (0x01 << 4); //Tell this guy he is in (in code is 01)
-                
+                curr_id = 0;
                 nrf_pwrup();
                 PT_YIELD_TIME_msec(2);
                 nrf_send_payload(&msg, 1);
@@ -263,10 +265,22 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                     sprintf(buffer, "%s", "Player ");
                     tft_writeString(buffer);
                     
-                    tft_setCursor(90, 80+i*20);
+                    tft_setCursor(80, 80+i*20);
                     tft_setTextColor(ILI9340_CYAN);
                     tft_setTextSize(2);
                     sprintf(buffer, "%d", player_ids[i]);
+                    tft_writeString(buffer);
+                    
+                    tft_setCursor(90, 80+i*20);
+                    tft_setTextColor(ILI9340_CYAN);
+                    tft_setTextSize(2);
+                    sprintf(buffer, "%s", ": ");
+                    tft_writeString(buffer);
+                    
+                    tft_setCursor(100, 80+i*20);
+                    tft_setTextColor(ILI9340_CYAN);
+                    tft_setTextSize(2);
+                    sprintf(buffer, "%d", player_health[i]);
                     tft_writeString(buffer);
                     
                 }
