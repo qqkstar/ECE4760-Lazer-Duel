@@ -47,7 +47,7 @@
         <targetDevice>PIC32MX250F128B</targetDevice>
         <targetHeader></targetHeader>
         <targetPluginBoard></targetPluginBoard>
-        <platformTool>PICkit3PlatformTool</platformTool>
+        <platformTool>PKOBSKDEPlatformTool</platformTool>
         <languageToolchain>XC32</languageToolchain>
         <languageToolchainVersion>1.40</languageToolchainVersion>
         <platform>3</platform>
@@ -249,8 +249,6 @@
         <C32Global>
         </C32Global>
       </item>
-      <item path="basestation.c" ex="true" overriding="false">
-      </item>
       <item path="cvref_sound.c" ex="true" overriding="false">
         <C32>
         </C32>
@@ -264,6 +262,8 @@
         </C32CPP>
         <C32Global>
         </C32Global>
+      </item>
+      <item path="gun.c" ex="true" overriding="false">
       </item>
       <item path="spitest.c" ex="true" overriding="false">
         <C32>

@@ -278,6 +278,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
     while (1) {
         //Joining state
         while(!joined){
+            mPORTBClearBits(LIFE_LED);
             ticket = (id << 6);
             nrf_pwrup();
             PT_YIELD_TIME_msec(2);
@@ -297,17 +298,26 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 received = 0;
                 if(((receive & 0xC0) >> 6) == id){
                     joined = 1;
-                    mPORTBClearBits(SHOOT_LED);
+                    
                 }else{
-                    mPORTBSetBits(SHOOT_LED);
+
                 }
                 nrf_flush_rx();
             }
         }
-        mPORTBSetBits(SHOOT_LED);
-        PT_YIELD_TIME_msec(1000);
-        mPORTBClearBits(SHOOT_LED);
-        PT_YIELD_TIME_msec(1000);
+        
+        PT_YIELD_TIME_msec(2);
+        nrf_pwrdown();
+        PT_YIELD_TIME_msec(2);
+        nrf_pwrup
+        mPORTBSetBits(LIFE_LED);
+        while(1){
+                msg = ((id << 6) | life_cnt);
+                nrf_send_payload(&msg, 1);
+                send = send + 1;
+                PT_YIELD_TIME_msec(10);
+            
+        }
 //        TX = 1;
 //        if (TX) {
 //            while(1){

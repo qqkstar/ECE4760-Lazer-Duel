@@ -134,7 +134,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
             
             if (received) {
                 
-                //tft_fillScreen(ILI9340_BLACK);
+                tft_fillScreen(ILI9340_BLACK);
                 tft_setCursor(0, 60);
                 tft_setTextColor(ILI9340_MAGENTA);
                 tft_setTextSize(2);
