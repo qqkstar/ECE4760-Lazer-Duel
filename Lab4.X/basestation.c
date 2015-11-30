@@ -38,6 +38,14 @@ static struct pt pt_radio;
 char send;
 char receive;
 
+int open = 1;
+char curr_id = 0;
+char curr_code = 0;
+char curr_pay = 0;
+
+char msg = 0;
+
+char retry_num = nrf24l01_SETUP_RETR_ARC_15 | nrf24l01_SETUP_RETR_ARD_1000;
 // Play game over sound
 
 void playSound1() {
@@ -103,6 +111,7 @@ void radioSetup(){
     nrf_write_reg(nrf24l01_RX_PW_P3, &payload_size, 1);
     nrf_write_reg(nrf24l01_RX_PW_P4, &payload_size, 1);
     nrf_write_reg(nrf24l01_RX_PW_P5, &payload_size, 1);
+    nrf_write_reg(nrf24l01_SETUP_RETR, &retry_num, 1);
 
     nrf_flush_rx();
    
@@ -111,7 +120,70 @@ void radioSetup(){
 static PT_THREAD(protothread_radio(struct pt *pt)) {
     PT_BEGIN(pt);
     while (1) {
-        TX = 0;
+        while(open){//Letting people into the game
+            nrf_pwrup();
+            PT_YIELD_TIME_msec(2);
+            nrf_rx_mode();
+            PT_YIELD_TIME_msec(50);
+            nrf_pwrdown();
+            PT_YIELD_TIME_msec(2);
+            receive = RX_payload[0];
+            curr_id = (receive & 0xC0) >> 6;
+            curr_code = (receive & 0x30) >> 4;
+            curr_pay = (receive & 0x0F);
+            
+            if (received) {
+                
+                //tft_fillScreen(ILI9340_BLACK);
+                tft_setCursor(0, 60);
+                tft_setTextColor(ILI9340_MAGENTA);
+                tft_setTextSize(2);
+                tft_writeString("Sent");
+                nrf_read_reg(nrf24l01_STATUS, &status, 1);
+                
+                tft_setCursor(0, 80);
+                tft_setTextColor(ILI9340_YELLOW);
+                tft_setTextSize(2);
+                sprintf(buffer, "%X", receive);
+                tft_writeString(buffer);
+                received = 0;
+                nrf_flush_rx();
+                
+                
+                tft_setCursor(0, 100);
+                tft_setTextColor(ILI9340_YELLOW);
+                tft_setTextSize(2);
+                sprintf(buffer, "%X", curr_id);
+                tft_writeString(buffer);
+                
+                tft_setCursor(0, 120);
+                tft_setTextColor(ILI9340_YELLOW);
+                tft_setTextSize(2);
+                sprintf(buffer, "%X", curr_code);
+                tft_writeString(buffer);
+                
+                tft_setCursor(0, 140);
+                tft_setTextColor(ILI9340_YELLOW);
+                tft_setTextSize(2);
+                sprintf(buffer, "%X", curr_pay);
+                tft_writeString(buffer);
+
+                
+                //PT_YIELD_TIME_msec(1000);
+                 
+                receive = 0;
+                
+                msg = (curr_id << 6) | (0x01 << 4); //Tell this guy he is in (in code is 01)
+                
+                nrf_pwrup();
+                PT_YIELD_TIME_msec(2);
+                nrf_send_payload(&msg, 1);
+                PT_YIELD_TIME_msec(2);
+                nrf_pwrdown();
+                PT_YIELD_TIME_msec(2);
+               
+            }
+        }
         // if transmitter
         //PT_YIELD_TIME_msec(100);
         if (TX) {
@@ -120,12 +192,12 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
         } else {
             nrf_rx_mode();
             while (1) {
-                LATAbits.LATA0 = 1;
+                //LATAbits.LATA0 = 1;
                 PT_YIELD_TIME_msec(1000);
                 
                 receive = RX_payload[0];
                 if (received) {
-                    LATAbits.LATA0 = 0;
+                    //LATAbits.LATA0 = 0;
                     tft_fillScreen(ILI9340_BLACK);
                     //_LEDRED = 0;
 
@@ -138,6 +210,8 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                     tft_setCursor(0, 300);
                     tft_setTextColor(ILI9340_YELLOW);
                     tft_setTextSize(2);
+                    
+                 
                     sprintf(buffer, "%X", receive);
                     tft_writeString(buffer);
                     received = 0;

@@ -279,48 +279,62 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
         //Joining state
         while(!joined){
             ticket = (id << 6);
+            nrf_pwrup();
+            PT_YIELD_TIME_msec(2);
             nrf_send_payload(&ticket, 1);
-            send = send + 1;
+            PT_YIELD_TIME_msec(2);
+            nrf_pwrdown();
+            PT_YIELD_TIME_msec(2);
+            nrf_pwrup();
+            PT_YIELD_TIME_msec(2);
             nrf_rx_mode();
-            PT_YIELD_TIME_msec(100);
+            PT_YIELD_TIME_msec(1000);
+            nrf_pwrdown();
+            PT_YIELD_TIME_msec(2);
             receive = RX_payload[0];
             if (received == 1) {         
                 nrf_read_reg(nrf24l01_STATUS, &status, 1);
                 received = 0;
-                if((receive >> 6) == id){
+                if(((receive & 0xC0) >> 6) == id){
                     joined = 1;
+                    mPORTBClearBits(SHOOT_LED);
+                }else{
+                    mPORTBSetBits(SHOOT_LED);
                 }
                 nrf_flush_rx();
             }
         }
-        
-        TX = 1;
-        if (TX) {
-            while(1){
-                msg = ((id << 6) | life_cnt);
-                nrf_send_payload(&msg, 1);
-                send = send + 1;
-                PT_YIELD_TIME_msec(1000);
-            
-           }
-    
-        } else {
-            nrf_rx_mode();
-            while (1) {
-                
-                PT_YIELD_TIME_msec(1000);
-                receive = RX_payload[0];
-                if (received == 1) {
-                     PT_YIELD_TIME_msec(200);         
-                    nrf_read_reg(nrf24l01_STATUS, &status, 1);
-                    received = 0;
-                    receive = 0;
-                    nrf_flush_rx();
-                }else{
-                     PT_YIELD_TIME_msec(100);
-                }
-            }
-        }
+        mPORTBSetBits(SHOOT_LED);
+        PT_YIELD_TIME_msec(1000);
+        mPORTBClearBits(SHOOT_LED);
+        PT_YIELD_TIME_msec(1000);
+//        TX = 1;
+//        if (TX) {
+//            while(1){
+//                msg = ((id << 6) | life_cnt);
+//                nrf_send_payload(&msg, 1);
+//                send = send + 1;
+//                PT_YIELD_TIME_msec(1000);
+//            
+//           }
+//    
+//        } else {
+//            nrf_rx_mode();
+//            while (1) {
+//                
+//                PT_YIELD_TIME_msec(1000);
+//                receive = RX_payload[0];
+//                if (received == 1) {
+//                     PT_YIELD_TIME_msec(200);         
+//                    nrf_read_reg(nrf24l01_STATUS, &status, 1);
+//                    received = 0;
+//                    receive = 0;
+//                    nrf_flush_rx();
+//                }else{
+//                     PT_YIELD_TIME_msec(100);
+//                }
+//            }
+//        }
     }
     PT_END(pt);
 } // timer thread
