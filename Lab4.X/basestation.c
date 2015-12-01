@@ -62,43 +62,6 @@ char player_health[4];
 char msg = 0;
 
 char retry_num = nrf24l01_SETUP_RETR_ARC_15 | nrf24l01_SETUP_RETR_ARD_1000;
-// Play game over sound
-
-void playSound1() {
-
-    DmaChnEnable(dmaChn);
-    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, timer_limit_1);
-    OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 50000);
-    ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
-    // Clear interrupt flag
-    mT5ClearIntFlag();
-
-}
-
-// Play score decrease sound
-
-void playSound2() {
-
-    DmaChnEnable(dmaChn);
-    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, timer_limit_2);
-    OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 50000);
-    ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
-    // Clear interrupt flag
-    mT5ClearIntFlag();
-
-}
-
-// Play score increase sound
-
-void playSound3() {
-
-    DmaChnEnable(dmaChn);
-    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, timer_limit_3);
-    OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 50000);
-    ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
-    // Clear interrupt flag
-    mT5ClearIntFlag();
-}
 
 void __ISR(_TIMER_5_VECTOR, ipl2) T5HandlerISR(void){
     mT5ClearIntFlag();
@@ -331,7 +294,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 for(i=0;i<players;i++){ // signal each player that game has begun
                     nrf_pwrdown();
                     PT_YIELD_TIME_msec(2);
-                    msg = (players << 6) | (0x10 << 4); // send game start msg                    
+                    msg = (player_ids[i] << 6) | (0x10 << 4); // send game start msg                    
                     nrf_pwrup();
                     PT_YIELD_TIME_msec(2);
                     nrf_send_payload(&msg, 1);

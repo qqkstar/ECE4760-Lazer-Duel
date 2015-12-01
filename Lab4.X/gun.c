@@ -22,6 +22,10 @@
 #define RECEIVER BIT_7
 #define dmaChn 0
 
+#define IDLE_STATE 0 // idle state after a reset
+#define JOIN_STATE 1 // state where players can join game
+#define PLAY_STATE 2 // state where game is in progress
+#define END_STATE 3 // game over state
 
 #define LATCH LATBbits.LATB4
 
@@ -35,7 +39,7 @@
 // ClockPin (SHCP)                   <-- SCK1(pin 25)
 // DataPin (SPI1)                    <-- RB5 (pin 14)
 
-static int alive = 1;
+static int alive = 1; // goes low for a few seconds after being hit
 
 
 static int timer_limit_1;
@@ -59,6 +63,12 @@ static char msg;
 static int joined = 0;
 static char id = 1; 
 static char idle = 1; 
+
+char curr_id = 0;
+char curr_code = 0;
+char curr_pay = 0;
+
+int state = 0;
 
 void SPI_setup() {
     TRISBbits.TRISB5 = 0; // configure pin RB as an output  
@@ -124,9 +134,6 @@ void __ISR(_TIMER_5_VECTOR, ipl2) T5HandlerISR(void){
 }
 
 void radioSetup(){
-    TX = 1;
-    send = 0xBB;
-
     // Set outputs to CE and CSN
     TRIS_csn = 0;
     TRIS_ce = 0;
@@ -226,26 +233,59 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
     PT_BEGIN(pt);
 
     while (1) {
-        while(idle){
-            mPORTBClearBits(LIFE_LED);
-            if (mPORTAReadBits(BIT_1)) {
-                idle = 0;
+        // idle state before attempting to join game
+        while(state == IDLE_STATE){
+            mPORTBClearBits(LIFE_LED); // turn off life LED
+            PT_YIELD_TIME_msec(2); 
+            if (mPORTAReadBits(BIT_1)) { // wait for trigger press
+                state = JOIN_STATE; // go to join game state
             }
+        }
+        
+        // state where gun attempts to join game before game start
+        while(state == JOIN_STATE){
+            while(!joined){ // when the gun is still trying to join the game
+                PT_YIELD_TIME_msec(100); // yield to give radio time to signal base station
+            }
+            PT_YIELD_TIME_msec(100); // wait for radio to receive start game signal
+            if(received){
+                receive = RX_payload[0]; // check what message was received
+                curr_id = (receive & 0xC0) >> 6;
+                curr_code = (receive & 0x30) >> 4;
+                curr_pay = (receive & 0x0F);
+                if((curr_id == id) && (curr_code == 0x10)){ // if the payload is a game start for the right gun
+                    mPORTBSetBits(LIFE_LED); // turn on the life LED to signal game start
+                    playSound1(); // play sound to signal start of game
+                    lives = 0xFF;
+                    life_cnt = 8;
+                    alive = 1;
+                    received = 0;
+                    state = PLAY_STATE;
+                }
+                else{ // if the payload wasn't for a game start do clear the flag
+                    received = 0;
+                }
+            }
+        }
+        
+        while(state == PLAY_STATE){
+             mPORTBClearBits(LIFE_LED);
+             delay_ms(500);
+             mPORTBSetBits(LIFE_LED);
+             delay_ms(500);
         }
         
         if(joined){
             //Trigger pressed, fire IR
             if (alive == 1) {
                 if (mPORTAReadBits(BIT_1)) {
-                    OC1RS = 842;
+                    OC1RS = 842; // duty cycle of IR emitter
                     mPORTBSetBits(SHOOT_LED);
                     CVREFOpen(CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0);
                     playSound1();
                     PT_YIELD_TIME_msec(100);
                     OC1RS = 0;
                     mPORTBClearBits(SHOOT_LED);
-                    //CVREFOpen(CVREF_DISABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
-                    //CVREFClose();
                     CVRCON = 0;
                     PT_YIELD_TIME_msec(200);//Needed for if we want to shoot oursleves for testing...
 
@@ -257,7 +297,7 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
                 mPORTBClearBits(LIFE_LED);
                 CVRCON = 0;
                 PT_YIELD_TIME_msec(10);
-                SPI1_transfer(lives);
+                SPI1_transfer(lives); // display lives
                 CVREFOpen(CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0);
                 playSound2();
 
@@ -269,8 +309,6 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
                 PT_YIELD_TIME_msec(20);
                 mINT0ClearIntFlag();
                 EnableINT0;
-                //CVREFClose();
-                //CVREFOpen(CVREF_DISABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
                 CVRCON = 0;
                 PT_YIELD_TIME_msec(100);
 
@@ -286,6 +324,55 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
 static PT_THREAD(protothread_radio(struct pt *pt)) {
     PT_BEGIN(pt);
     while (1) {
+        while(state == IDLE_STATE){
+            PT_YIELD_TIME_msec(2); 
+        }
+        
+        while(state == JOIN_STATE){
+            if(!joined){
+                mPORTBClearBits(LIFE_LED);
+                ticket = (id << 6); // send id with request to join game
+                nrf_pwrup();
+                PT_YIELD_TIME_msec(2);
+                nrf_send_payload(&ticket, 1);
+                PT_YIELD_TIME_msec(2);
+                nrf_pwrdown();
+                PT_YIELD_TIME_msec(2);
+                nrf_pwrup();
+                PT_YIELD_TIME_msec(2);
+                nrf_rx_mode(); // wait for confirmation of join
+                PT_YIELD_TIME_msec(1000);
+                nrf_pwrdown();
+                PT_YIELD_TIME_msec(2);
+                receive = RX_payload[0];
+                curr_id = (receive & 0xC0) >> 6;
+                curr_code = (receive & 0x30) >> 4;
+                curr_pay = (receive & 0x0F);
+                if (received == 1) { // if confirmation was received 
+                    nrf_read_reg(nrf24l01_STATUS, &status, 1);
+                    received = 0;
+                    if(((receive & 0xC0) >> 6) == id){ // check if confirmation was for correct gun
+                        joined = 1; // flag that the game was joined successfully
+                    }else{
+
+                    }
+                    nrf_flush_rx();
+                }
+            }
+            else{ // if game was joined wait for game start message
+                if(!received){
+                    nrf_pwrup();
+                    PT_YIELD_TIME_msec(2);
+                    nrf_rx_mode(); // wait for confirmation of join
+                    PT_YIELD_TIME_msec(1000);
+                    nrf_pwrdown();
+                }
+                else{
+                    nrf_pwrdown();
+                    PT_YIELD_TIME_msec(100);
+                }
+            }
+        }
         //Joining state
         while(!joined){
             mPORTBClearBits(LIFE_LED);
@@ -346,9 +433,6 @@ void main(void) {
     radioSetup();
     gunSetup();
     
-    send = 0xBB;
-    TX = 1;
-    
     while (1) {
         PT_SCHEDULE(protothread_timer(&pt_timer));
         PT_SCHEDULE(protothread_radio(&pt_radio));
@@ -357,6 +441,7 @@ void main(void) {
 
 // === end  ======================================================
 
+// Interrupt for IR sensor
 void __ISR(_EXTERNAL_0_VECTOR, ipl2) INT0Interrupt(){
     alive = 0;
     lives = lives << 1;
