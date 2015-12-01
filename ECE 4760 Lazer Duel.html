@@ -1,0 +1,87 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!--HTML/CSS used with author's permission -->
+
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta http-equiv="Content-Language" content="en-us">
+<title>ECE 4760 Lazer Duel</title>
+<link rel="stylesheet" type="text/css" media="all" href="./Time System/cornell_main.css">
+<link rel="stylesheet" type="text/css" media="all" href="./Time System/cornell_1column.css">
+<link rel="stylesheet" type="text/css" media="all" href="./Time System/main.css">
+<link rel="shortcut icon" href="./Time System/favicon.ico" type="image/x-icon">
+<meta name="author" content="XiaoXing Zhao, Fred Kummer, Doug Katz">
+<meta name="description" content="Two guns, one base station. Let the lazer duel begin!">
+<meta name="keywords" content="INSERT KEYWORDS HERE">
+</head>
+<body>
+
+<div id="mainnav">
+  <ul>
+    <li><a href="#Introduction">Introduction</a></li>
+    <li><a href="#High Level Design">High&nbsp;Level&nbsp;Design</a></li>
+    <li><a href="#Hardware">Hardware</a></li>
+    <li><a href="#Software">Software</a></li>
+    <li><a href="#Results">Results</a></li>
+    <li><a href="#Conclusions">Conclusions</a></li>
+    <li><a href="#Appendices">Appendices</a></li>
+  </ul>
+</div>
+<!-- end mainnav -->
+<!-- end header -->
+<div id="sectiontitle">
+  <h4><a href="http://people.ece.cornell.edu/land/courses/ece4760/">ECE 4760</a>: <a href="http://people.ece.cornell.edu/land/courses/ece4760/FinalProjects/">Final Project</a></h4>
+  <h1>Lazer Duel</h1>
+  <h3>XiaoXing Zhao(<a href="mailto:xz254@cornell.edu">xz254<!--REMOVE-->@<!--REMOVE-->cornell.edu</a>)</h3>
+  <h3>Fred Kummer (<a href="mailto:fck22@cornell.edu">fck22<!--REMOVE-->@<!--REMOVE-->cornell.edu</a>)</h3>
+  <h3>Doug Katz (<a href="mailto:djk289@cornell.edu">djk289<!--REMOVE-->@<!--REMOVE-->cornell.edu</a>)</h3>
+
+</div>
+<div id="wrapper">
+  <div id="content">
+    <div id="maincontent" class="hub">
+    
+      <div id="Introduction">
+      <div id="pullquote">
+          <h3><strong>Introduction:</strong></h3>
+          <p class="source">project soundbyte</p>
+        </div>
+      <p>For our ECE 4760 final project, we designed and built a <strong>wirelessly programmable digital pace clock </strong>with a large format <strong>LED display</strong> and <strong>Android smartphone control</strong> and programming. </p>
+      
+      <p>This <strong>original design</strong> achieves the functionality of commercailly available pace clocks but with an <strong>intuitive user interface</strong> that goes beyond anything that is available in the current marketplace, all at a <strong>small fraction of the cost</strong>.</p>
+      
+      <p>The clock runs from an <strong>Atmel ATmega32A</strong> microcontroller and a host of peripheral integrated circuits with a <strong>Bluetooth connection</strong> to an original Android smartphone application to configure <strong>swimming workouts, timing intervals, </strong>and <strong>real-time wireless control </strong>of the clock's features.</p>
+      
+
+      <div id="High Level Design">  
+      <div class="linklist"> <a name="design"></a>
+
+        <h2>High Level Design &nbsp;&nbsp;&nbsp;<font size="-1"><strong><a href="#top">top</a></strong></font></h2>
+        <h3>Overview</h3>
+        
+        <p>Our project brings together a wide range of hardware and software
+design experience: from bit level inter-chip communication to
+processing our compact, original instruction set, to managing user
+interactions wirelessly in real time, to designing an intuitive user
+interface for configuring and interacting with the pace clock on an
+Android smartphone.</p>
+	<h4>Standards</h4>
+<p>A variety of standards are used to implement communication between
+peripheral devices, and we use a large fraction of the peripherals
+available on the ATmega microcontroller. Communicating with the LED
+drivers is achieved using the SPI interface and a host of other
+connections required by the TLC5940 devices. These LED drivers are
+complicated and capable of 12-bit PWM current sinking using an
+external clock, as well as 6-bit dot-correction tables with persistent
+and SRAM storage registers. As a result, there is a lot of data
+our pace clock for an Android device.</p>
+
+        <h4>High Level Block Diagram</h4>
+        <div class="image"> <img src="./Time System/block diagram.png" width="672" height="504">
+                <p class="caption">High-level block diagram.</p>
+        </div>
+      
+ 
+      </div>
+    </div>
+  </body>
+</html>
