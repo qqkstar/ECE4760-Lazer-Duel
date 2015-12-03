@@ -273,9 +273,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                     error = 0;
                     nrf_pwrdown();
                     PT_YIELD_TIME_msec(2);
-                    for(i = 0;i<4;i++){
-                        msg = (0b10 << 4); // send game start msg
-                    }
+                    msg = (0b10 << 4); // send game start msg
                     nrf_pwrup();
                     PT_YIELD_TIME_msec(2);
                     nrf_send_payload(&msg, 1);

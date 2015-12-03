@@ -202,8 +202,6 @@ void nrf_send_payload(char * data, int len){
     LATBbits.LATB3 = 0;
     sent = 0;
     _ce = 0; // transition to standby II mode
-    nrf_pwrdown(); // power down radio
-    nrf_pwrup(); // power up radio to reenter standby I mode
     
 }
 
