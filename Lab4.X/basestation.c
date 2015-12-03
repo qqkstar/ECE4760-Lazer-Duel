@@ -105,8 +105,15 @@ void radioSetup() {
 
 }
 
-// Displays all players' health on TFT
+// disassembles a packet
+void parsePacket() {
+    receive = RX_payload[0]; // check what message was received
+    curr_id = (receive & 0xC0) >> 6;
+    curr_code = (receive & 0x30) >> 4;
+    curr_pay = (receive & 0x0F);
+}
 
+// Displays all players' health on TFT
 void displayScoreBoard() {
     for (i = 0; i < players; i++) {
         tft_setCursor(0, 80 + i * 20);
@@ -228,11 +235,11 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 curr_pay = (receive & 0x0F);
                 received = 0;
                 
-//                for (i = 0; i < 4; i++) {
-//                    if ((curr_id == player_ids[i]) && (curr_id != 0)) { // check if player has already joined game
-//                        joined = 1;
-//                    }
-//                }
+                for (i = 0; i < 4; i++) {
+                    if ((curr_id == player_ids[i]) && (curr_id != 0)) { // check if player has already joined game
+                        joined = 1;
+                    }
+                }
 
                 if (!joined) { // if the player has not already joined the game
                     //do {
@@ -312,25 +319,21 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
             tft_setTextSize(2);
             sprintf(buffer, "%d", state);
             tft_writeString(buffer);
-
+            
             // put radio in receive mode periodically
             nrf_pwrup();
             PT_YIELD_TIME_msec(2);
             nrf_rx_mode();
-            PT_YIELD_TIME_msec(50);
+            PT_YIELD_TIME_msec(2000);
             nrf_pwrdown();
             PT_YIELD_TIME_msec(2);
 
             while (received) { // when data has been received
-                receive = RX_payload[0]; // interpret payload
-                curr_id = (receive & 0xC0) >> 6;
-                curr_code = (receive & 0x30) >> 4;
-                curr_pay = (receive & 0x0F);
-
+                parsePacket();
                 if (curr_code == 10) { // if the data is how much life a player has
                     for (i = 1; i < players; i++) {
                         if (player_ids[i] == curr_id) { // determine which player sent the payload 
-                            player_health[i] = curr_pay;
+                            player_health[i] = curr_pay; // update the player's health
                         }
                     }
                 }

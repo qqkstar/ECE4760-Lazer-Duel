@@ -259,20 +259,61 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
             PT_YIELD_TIME_msec(100);
         }
 
-
         while (state == PLAY_STATE) {
-            mPORTBClearBits(LIFE_LED);
-            delay_ms(500);
-            mPORTBSetBits(LIFE_LED);
-            delay_ms(500);
+            if (alive) { // check if player has not been hit
+                if (mPORTAReadBits(BIT_1)) { // check if player has shot the gun
+                    OC1RS = 842; // duty cycle of IR emitter (shoot gun)
+                    mPORTBSetBits(SHOOT_LED); // blink LED to signal the player has shot
+                    CVREFOpen(CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0);
+                    playSound1(); // play a shooting sound
+                    PT_YIELD_TIME_msec(100); // send the shot as a pulse
+                    OC1RS = 0; // turn off emitter
+                    mPORTBClearBits(SHOOT_LED); // turn off shoot LED
+                    CVRCON = 0;
+                } else { // If the player hasn't shot yield to radio
+                    OC1RS = 0;
+                    PT_YIELD_TIME_msec(200);
+                }
+            } else { // if the player was shot
+                mPORTBClearBits(LIFE_LED); // turn off life LED to signal player was shot
+                CVRCON = 0; // turn off IR emitter
+                PT_YIELD_TIME_msec(10);
+                SPI1_transfer(lives); // display player's health
+                CVREFOpen(CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0);
+                playSound2(); // play a hit sound
+                PT_YIELD_TIME_msec(2000);
+                if (lives != 0) { // if player hasn't run out of lives
+                    playSound3(); // play a back alive sound
+                    PT_YIELD_TIME_msec(200);
+                    mPORTBSetBits(LIFE_LED); // turn back on life LED to signal player is alive
+                    alive = 1;
+                    PT_YIELD_TIME_msec(20);
+                    // clear interrupt and emitter
+                    mINT0ClearIntFlag();
+                    EnableINT0;
+                    CVRCON = 0;
+                    PT_YIELD_TIME_msec(100);
+                } else { // if player is out of lives
+                    state = END_STATE;
+                }
+
+            }
         }
-    }
 
-    // END WHILE(1)
-    PT_END(pt);
-} // timer thread
+        while (state == END_STATE) { // if player has dies or game has ended 
+            // blink the shoot LED to signal game over
+            mPORTBClearBits(LIFE_LED); // turn off life LED at end of game
+            mPORTBSetBits(SHOOT_LED);
+            PT_YIELD_TIME_msec(500);
+            mPORTBClearBits(SHOOT_LED);
+            PT_YIELD_TIME_msec(500);
+        }
+        // END WHILE(1)
+        PT_END(pt);
+    } // timer thread
+}
 
-static PT_THREAD(protothread_radio(struct pt *pt)) {
+static PT_THREAD(protothread_radio(struct pt * pt)) {
     PT_BEGIN(pt);
     while (1) {
         while (state == IDLE_STATE) {
@@ -323,25 +364,34 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                     received = 0;
                     state = PLAY_STATE;
                 } else { // if the payload wasn't for a game start do clear the flag
-                    
                     received = 0;
                 }
             }
         }
-        
-        while(state == PLAY_STATE){
-            mPORTBSetBits(SHOOT_LED);
-            PT_YIELD_TIME_msec(2000);
-            mPORTBClearBits(SHOOT_LED);
+
+        while (state == PLAY_STATE) {
+            // send current life to base station
+            error = 0;
+            msg = ((id << 6) | life_cnt);
+            nrf_send_payload(&msg, 1);
+            if (received) { // if a message was received
+                parsePacket();
+                if (curr_code == 0b11) { // if the message is a game over message
+                    nrf_pwrdown();
+                    state = END_STATE;
+
+                }
+                received = 0;
+            }
+            nrf_pwrdown();
+            nrf_pwrup();
+            PT_YIELD_TIME_msec(2);
+            nrf_rx_mode(); // see if end game message was sent
             PT_YIELD_TIME_msec(2000);
         }
         
-        while (0) {
-            msg = ((id << 6) | life_cnt);
-            nrf_send_payload(&msg, 1);
-            send = send + 1;
+        while(state == END_STATE){
             PT_YIELD_TIME_msec(2000);
-
         }
     }
     PT_END(pt);
