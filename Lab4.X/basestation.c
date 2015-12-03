@@ -260,16 +260,27 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                     error = 0;
                     nrf_pwrdown();
                     PT_YIELD_TIME_msec(2);
-                    msg = (player_ids[i] << 6) | (0b10 << 4); // send game start msg                    
+                    msg = (0b10 << 4); // send game start msg                    
                     nrf_pwrup();
                     PT_YIELD_TIME_msec(2);
                     nrf_send_payload(&msg, 1);
+                    i++;
                     PT_YIELD_TIME_msec(2);
                     if(error){
+                        tft_fillScreen(ILI9340_BLACK);
                         tft_setCursor(0, 120);
                         tft_setTextColor(ILI9340_RED);
                         tft_setTextSize(2);
                         tft_writeString("Error");
+                        
+                       
+                        
+                        tft_setCursor(0, 150);
+                        tft_setTextColor(ILI9340_GREEN);
+                        tft_setTextSize(2);
+                        sprintf(buffer, "%d", i);
+                        tft_writeString(buffer);
+                        
                     }
                 }while(error);
                 //tft_fillScreen(ILI9340_BLACK);
