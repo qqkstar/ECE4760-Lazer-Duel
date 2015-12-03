@@ -62,7 +62,7 @@ static char receive;
 static char ticket;
 static char msg;
 static int joined = 0;
-static char id = 2;
+static char id = 1;
 static char idle = 1;
 
 char curr_id = 0;

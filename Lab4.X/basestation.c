@@ -237,7 +237,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 if (!joined) { // if the player has not already joined the game
                     //do {
                         error = 0;
-                        msg = (2 << 6) | (0b01 << 4) ; //Tell this guy he is in (in code is 01)
+                        msg = (curr_id << 6) | (0b01 << 4) ; //Tell this guy he is in (in code is 01)
                         nrf_pwrup();
                         PT_YIELD_TIME_msec(2);
                         nrf_send_payload(&msg, 1);
@@ -273,7 +273,9 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                     error = 0;
                     nrf_pwrdown();
                     PT_YIELD_TIME_msec(2);
-                    msg = (0b10 << 4); // send game start msg                    
+                    for(i = 0;i<4;i++){
+                        msg = (0b10 << 4); // send game start msg
+                    }
                     nrf_pwrup();
                     PT_YIELD_TIME_msec(2);
                     nrf_send_payload(&msg, 1);
