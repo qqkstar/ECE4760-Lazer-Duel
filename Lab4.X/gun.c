@@ -243,7 +243,7 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
     while (1) {
         // idle state before attempting to join game
         while (state == IDLE_STATE) {
-            mPORTBClearBits(LIFE_LED); // turn off life LED
+            //mPORTBClearBits(LIFE_LED); // turn off life LED
             PT_YIELD_TIME_msec(2);
             if (mPORTAReadBits(BIT_1)) { // wait for trigger press
                 state = JOIN_STATE; // go to join game state
@@ -276,11 +276,15 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
     PT_BEGIN(pt);
     while (1) {
         while (state == IDLE_STATE) {
-            PT_YIELD_TIME_msec(2);
+            //PT_YIELD_TIME_msec(2);
+            mPORTBSetBits(LIFE_LED);
+            PT_YIELD_TIME_msec(5000);
+            mPORTBClearBits(LIFE_LED);
+            PT_YIELD_TIME_msec(5000);
         }
 
         while (state == JOIN_STATE) {
-            mPORTBClearBits(LIFE_LED);
+            mPORTBSetBits(SHOOT_LED);
             ticket = (id << 6); // send id with request to join game
             nrf_pwrup();
             PT_YIELD_TIME_msec(2);
@@ -316,6 +320,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
             mPORTBSetBits(SHOOT_LED);
             PT_YIELD_TIME_msec(500);
             mPORTBClearBits(SHOOT_LED);
+            PT_YIELD_TIME_msec(500);
             if (received) {
                 parsePacket();
                 if (curr_code == 0b10) { // if the payload is a game start for the right gun
@@ -330,6 +335,13 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                     received = 0;
                 }
             }
+        }
+        
+        while(state == PLAY_STATE){
+            mPORTBSetBits(SHOOT_LED);
+            PT_YIELD_TIME_msec(2000);
+            mPORTBClearBits(SHOOT_LED);
+            PT_YIELD_TIME_msec(2000);
         }
         
         while (0) {

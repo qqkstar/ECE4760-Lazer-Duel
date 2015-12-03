@@ -195,8 +195,10 @@ void nrf_send_payload(char * data, int len){
     nrf_write_payload(data, len);
     nrf_tx_mode();
     while(!(sent) && !(error)){ // wait until data sent interrupt triggers
-        
+        TRISBbits.TRISB3 = 0;
+        LATBbits.LATB3 = 1;
     }
+    LATBbits.LATB3 = 0;
     sent = 0;
     _ce = 0; // transition to standby II mode
     nrf_pwrdown(); // power down radio
@@ -213,6 +215,7 @@ void __ISR(_EXTERNAL_1_VECTOR, ipl2) INT1Handler(void){
         nrf_read_payload(&RX_payload);
         received = 1; // signal main code that payload was received
         status |= nrf24l01_STATUS_RX_DR; // clear interrupt on radio
+        nrf_flush_rx();
     }
         // if data sent or if acknowledge received when auto ack enabled
     else if (status & nrf24l01_STATUS_TX_DS) {

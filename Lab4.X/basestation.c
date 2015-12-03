@@ -63,7 +63,7 @@ char msg = 0;
 
 char retry_num = nrf24l01_SETUP_RETR_ARC_15 | nrf24l01_SETUP_RETR_ARD_1000;
 
-void __ISR(_TIMER_5_VECTOR, ipl2) T5HandlerISR(void){
+void __ISR(_TIMER_5_VECTOR, ipl2) T5HandlerISR(void) {
     mT5ClearIntFlag();
     DmaChnDisable(dmaChn);
     CloseTimer5();
@@ -71,13 +71,14 @@ void __ISR(_TIMER_5_VECTOR, ipl2) T5HandlerISR(void){
 
 // sets up button on base station
 // button uses external interrupt 0 on pin 16
-void buttonSetup(){
+
+void buttonSetup() {
     TRISBbits.TRISB7 = 1; // set pin 16 as interrupt
     ConfigINT0(EXT_INT_ENABLE | RISING_EDGE_INT | EXT_INT_PRI_2);
     EnableINT0;
 }
 
-void radioSetup(){
+void radioSetup() {
     TX = 1;
     send = 0xBB;
 
@@ -101,31 +102,32 @@ void radioSetup(){
     nrf_write_reg(nrf24l01_SETUP_RETR, &retry_num, 1);
 
     nrf_flush_rx();
-   
+
 }
 
 // Displays all players' health on TFT
-void displayScoreBoard(){
-    for(i=0;i<players;i++){
-        tft_setCursor(0, 80+i*20);
+
+void displayScoreBoard() {
+    for (i = 0; i < players; i++) {
+        tft_setCursor(0, 80 + i * 20);
         tft_setTextColor(ILI9340_YELLOW);
         tft_setTextSize(2);
         sprintf(buffer, "%s", "Player ");
         tft_writeString(buffer);
 
-        tft_setCursor(80, 80+i*20);
+        tft_setCursor(80, 80 + i * 20);
         tft_setTextColor(ILI9340_YELLOW);
         tft_setTextSize(2);
         sprintf(buffer, "%d", player_ids[i]);
         tft_writeString(buffer);
 
-        tft_setCursor(85, 80+i*20);
+        tft_setCursor(85, 80 + i * 20);
         tft_setTextColor(ILI9340_YELLOW);
         tft_setTextSize(2);
         sprintf(buffer, "%s", ": ");
         tft_writeString(buffer);
 
-        tft_setCursor(100, 80+i*20);
+        tft_setCursor(100, 80 + i * 20);
         tft_setTextColor(ILI9340_RED);
         tft_setTextSize(2);
         sprintf(buffer, "%d", player_health[i]);
@@ -135,8 +137,9 @@ void displayScoreBoard(){
 }
 
 // signal players that game has ended
-void sendEndGame(){
-    for(i=0;i<players;i++){
+
+void sendEndGame() {
+    for (i = 0; i < players; i++) {
         msg = (player_ids[i] << 6) | (0b11 << 4) | (player_health[i]); // signal each player that the game has ended
         // send the message
         nrf_pwrup();
@@ -149,12 +152,13 @@ void sendEndGame(){
 }
 
 // Resets variables for next game
-void reset(){
+
+void reset() {
     curr_id = 0;
     curr_code = 0;
     curr_pay = 0;
 
-    for(i=0;i<4;i++){
+    for (i = 0; i < 4; i++) {
         player_ids[i] = 0;
         player_health[i] = 0;
     }
@@ -165,98 +169,109 @@ void reset(){
     send = 0;
     receive = 0;
     received = 0;
-    
+
     i = 0; // loop variable;
     count = 0; // debounce counter
     nrf_pwrdown();
 }
 
 // button was pressed
-void __ISR(_EXTERNAL_0_VECTOR, ipl2) INT0Interrupt(){
-   while(mPORTBReadBits(BIT_7)){
-       count++;
-       if(count > 1100){
-       }
-   }
-   if(count > 1000){ // debounce button
-       button_press = 1;
-   }
-   count = 0;
+
+void __ISR(_EXTERNAL_0_VECTOR, ipl2) INT0Interrupt() {
+    while (mPORTBReadBits(BIT_7)) {
+        count++;
+        if (count > 1100) {
+        }
+    }
+    if (count > 1000) { // debounce button
+        button_press = 1;
+    }
+    count = 0;
     mINT0ClearIntFlag();
 }
-
 
 static PT_THREAD(protothread_radio(struct pt *pt)) {
     PT_BEGIN(pt);
     while (1) {
-        while(state == IDLE_STATE){ // reset state
+        while (state == IDLE_STATE) { // reset state
             tft_setCursor(0, 160);
             tft_setTextColor(ILI9340_BLUE);
             tft_setTextSize(2);
             tft_writeString("State");
-            
+
             tft_setCursor(0, 180);
             tft_setTextColor(ILI9340_GREEN);
             tft_setTextSize(2);
             sprintf(buffer, "%d", state);
             tft_writeString(buffer);
-            if(button_press == 1){ // wait for a button to be pressed
+            if (button_press == 1) { // wait for a button to be pressed
                 button_press = 0; // clear button press
                 tft_fillScreen(ILI9340_BLACK);
                 state = JOIN_STATE; // go to the join game state
             }
         }
-    
-        while(state == JOIN_STATE){//Letting people into the game
+
+        while (state == JOIN_STATE) {//Letting people into the game
             nrf_pwrup();
             PT_YIELD_TIME_msec(2);
             nrf_rx_mode();
             PT_YIELD_TIME_msec(50);
             nrf_pwrdown();
             PT_YIELD_TIME_msec(2);
-            
-            
+
+
             if (received) {
                 receive = RX_payload[0];
                 curr_id = (receive & 0xC0) >> 6;
                 curr_code = (receive & 0x30) >> 4;
                 curr_pay = (receive & 0x0F);
-                //PT_YIELD_TIME_msec(1000);
-                 
+
+
                 received = 0;
-                for(i=0;i<4;i++){
-                    if((curr_id == player_ids[i]) && (curr_id != 0)){ // check if player has already joined game
+
+                for (i = 0; i < 4; i++) {
+                    if ((curr_id == player_ids[i]) && (curr_id != 0)) { // check if player has already joined game
                         joined = 1;
-                    }  
+                    }
                 }
-                if(!joined){ // if the player has not already joined the game
-                    for(i=0;i<4;i++){
-                        if(player_ids[i] == 0){
+
+                if (!joined) { // if the player has not already joined the game
+                    do {
+                        error = 0;
+                        msg = (curr_id << 6) | (0b01 << 4); //Tell this guy he is in (in code is 01)
+                        curr_id = 0;
+                        nrf_pwrup();
+                        PT_YIELD_TIME_msec(2);
+                        nrf_send_payload(&msg, 1);
+                        PT_YIELD_TIME_msec(2);
+                        nrf_pwrdown();
+                        PT_YIELD_TIME_msec(2);
+                        tft_setCursor(0, 200);
+                        tft_setTextColor(ILI9340_BLUE);
+                        tft_setTextSize(2);
+                        tft_writeString("N/C");
+                    } while (error);
+                            
+                    for (i = 0; i < 4; i++) {
+                        if (player_ids[i] == 0) {
                             player_ids[i] = curr_id; // put new id in array
                             player_health[i] = 8;
                             players += 1; // keep count of players in game
                             break;
                         }
-                    }   
+                    }
                 }
-                
+
                 joined = 0;
-                msg = (curr_id << 6) | (0b01 << 4); //Tell this guy he is in (in code is 01)
-                curr_id = 0;
-                nrf_pwrup();
-                PT_YIELD_TIME_msec(2);
-                nrf_send_payload(&msg, 1);
-                PT_YIELD_TIME_msec(2);
-                nrf_pwrdown();
-                PT_YIELD_TIME_msec(2);
-                
+
+
                 // display players
                 displayScoreBoard();
-               
+
             }
-            if(button_press == 1){ // if button was pressed go to play state
+            if (button_press == 1) { // if button was pressed go to play state
                 button_press = 0; // clear the press
-                do{ // signal each player that game has begun
+                do { // signal each player that game has begun
                     error = 0;
                     nrf_pwrdown();
                     PT_YIELD_TIME_msec(2);
@@ -266,39 +281,40 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                     nrf_send_payload(&msg, 1);
                     i++;
                     PT_YIELD_TIME_msec(2);
-                    if(error){
+                    if (error) {
                         tft_fillScreen(ILI9340_BLACK);
                         tft_setCursor(0, 120);
                         tft_setTextColor(ILI9340_RED);
                         tft_setTextSize(2);
                         tft_writeString("Error");
-                        
-                       
-                        
+
+
+
                         tft_setCursor(0, 150);
                         tft_setTextColor(ILI9340_GREEN);
                         tft_setTextSize(2);
                         sprintf(buffer, "%d", i);
                         tft_writeString(buffer);
-                        
+
                     }
-                }while(error);
+                } while (error);
                 //tft_fillScreen(ILI9340_BLACK);
+                error = 0;
                 state = PLAY_STATE; // go to play state
             }
         }
-        while(state == PLAY_STATE){ // While game is in progress
+        while (state == PLAY_STATE) { // While game is in progress
             tft_setCursor(0, 160);
             tft_setTextColor(ILI9340_BLUE);
             tft_setTextSize(2);
             tft_writeString("State");
-            
+
             tft_setCursor(0, 180);
             tft_setTextColor(ILI9340_GREEN);
             tft_setTextSize(2);
             sprintf(buffer, "%d", state);
             tft_writeString(buffer);
-            
+
             // put radio in receive mode periodically
             nrf_pwrup();
             PT_YIELD_TIME_msec(2);
@@ -306,16 +322,16 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
             PT_YIELD_TIME_msec(50);
             nrf_pwrdown();
             PT_YIELD_TIME_msec(2);
-            
-            while(received){ // when data has been received
+
+            while (received) { // when data has been received
                 receive = RX_payload[0]; // interpret payload
                 curr_id = (receive & 0xC0) >> 6;
                 curr_code = (receive & 0x30) >> 4;
                 curr_pay = (receive & 0x0F);
-                
-                if(curr_code == 10){ // if the data is how much life a player has
-                    for(i=1;i<players;i++){
-                        if(player_ids[i] == curr_id){ // determine which player sent the payload 
+
+                if (curr_code == 10) { // if the data is how much life a player has
+                    for (i = 1; i < players; i++) {
+                        if (player_ids[i] == curr_id) { // determine which player sent the payload 
                             player_health[i] = curr_pay;
                         }
                     }
@@ -324,34 +340,34 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 received = 0;
                 receive = 0;
                 displayScoreBoard(); // display updated health of players
-            }            
-            
-            if(button_press == 1){
+            }
+
+            if (button_press == 1) {
                 button_press = 0;
                 sendEndGame(); // signal the end of the game to all guns
                 tft_fillScreen(ILI9340_BLACK);
                 displayScoreBoard();
                 state = END_STATE;
-                
+
             }
         }
-        
-        while(state == END_STATE){ // After game has ended
+
+        while (state == END_STATE) { // After game has ended
             // If button is pressed go to IDLE or JOIN state
             tft_setCursor(0, 160);
             tft_setTextColor(ILI9340_BLUE);
             tft_setTextSize(2);
             tft_writeString("State");
-            
+
             tft_setCursor(0, 180);
             tft_setTextColor(ILI9340_GREEN);
             tft_setTextSize(2);
             sprintf(buffer, "%d", state);
             tft_writeString(buffer);
-            
+
             // signal the end of the game repeatedly incase a gun did not receive the message
             sendEndGame();
-            if(button_press == 1){
+            if (button_press == 1) {
                 button_press = 0;
                 reset(); // reset all variables for next game
                 tft_fillScreen(ILI9340_BLACK);
@@ -371,17 +387,17 @@ void main(void) {
     TRISAbits.TRISA0 = 0;
     LATAbits.LATA0 = 0;
     PT_INIT(&pt_radio);
-    
+
     radioSetup();
-   
+
     tft_init_hw();
     tft_begin();
     tft_fillScreen(ILI9340_BLACK);
     //240x320 vertical display
     tft_setRotation(0); // Use tft_setRotation(1) for 320x240
-    
+
     TX = 0;
-    
+
     while (1) {
         PT_SCHEDULE(protothread_radio(&pt_radio));
     }
