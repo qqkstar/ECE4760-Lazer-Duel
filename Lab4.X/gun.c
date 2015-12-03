@@ -73,7 +73,7 @@ int state = 0;
 
 void SPI_setup() {
     TRISBbits.TRISB5 = 0; // configure pin RB as an output  
-    PPSOutput(2, RPB5, SDO1); // map SDO1 to RA1
+    PPSOutput(2, RPB5, SDO1); // map SDO1 to RB5
 
 }
 
@@ -260,8 +260,10 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
         }
 
         while (state == PLAY_STATE) {
-            if (alive) { // check if player has not been hit
-               
+                CVRCON = 0; // turn off cvref
+                PT_YIELD_TIME_msec(10);
+                SPI1_transfer(lives); // display player's health
+            if (alive) { // check if player has not been hit               
                 if (mPORTAReadBits(BIT_1)) { // check if player has shot the gun
                     OC1RS = 842; // duty cycle of IR emitter (shoot gun)
                     mPORTBSetBits(SHOOT_LED); // blink LED to signal the player has shot
@@ -277,9 +279,6 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
                 }
             } else { // if the player was shot
                 mPORTBClearBits(LIFE_LED); // turn off life LED to signal player was shot
-                CVRCON = 0; // turn off IR emitter
-                PT_YIELD_TIME_msec(10);
-                SPI1_transfer(lives); // display player's health
                 CVREFOpen(CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0);
                 playSound2(); // play a hit sound
                 PT_YIELD_TIME_msec(2000);
@@ -436,7 +435,6 @@ void __ISR(_EXTERNAL_0_VECTOR, ipl2) INT0Interrupt() {
     alive = 0;
     lives = lives << 1;
     life_cnt--;
-
     DisableINT0;
     mINT0ClearIntFlag();
 
