@@ -99,7 +99,7 @@ void radioSetup() {
     nrf_write_reg(nrf24l01_RX_PW_P3, &payload_size, 1);
     nrf_write_reg(nrf24l01_RX_PW_P4, &payload_size, 1);
     nrf_write_reg(nrf24l01_RX_PW_P5, &payload_size, 1);
-    nrf_write_reg(nrf24l01_SETUP_RETR, &retry_num, 1);
+    //nrf_write_reg(nrf24l01_SETUP_RETR, &retry_num, 1);
 
     nrf_flush_rx();
 
@@ -215,51 +215,48 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
             nrf_pwrup();
             PT_YIELD_TIME_msec(2);
             nrf_rx_mode();
-            PT_YIELD_TIME_msec(50);
+            PT_YIELD_TIME_msec(2000);
             nrf_pwrdown();
-            PT_YIELD_TIME_msec(2);
-
+     
+            curr_id = 0;
 
             if (received) {
+                       
                 receive = RX_payload[0];
                 curr_id = (receive & 0xC0) >> 6;
                 curr_code = (receive & 0x30) >> 4;
                 curr_pay = (receive & 0x0F);
-
-
                 received = 0;
-
-                for (i = 0; i < 4; i++) {
-                    if ((curr_id == player_ids[i]) && (curr_id != 0)) { // check if player has already joined game
-                        joined = 1;
-                    }
-                }
+                
+//                for (i = 0; i < 4; i++) {
+//                    if ((curr_id == player_ids[i]) && (curr_id != 0)) { // check if player has already joined game
+//                        joined = 1;
+//                    }
+//                }
 
                 if (!joined) { // if the player has not already joined the game
-                    do {
+                    //do {
                         error = 0;
-                        msg = (curr_id << 6) | (0b01 << 4); //Tell this guy he is in (in code is 01)
-                        curr_id = 0;
+                        msg = (2 << 6) | (0b01 << 4) ; //Tell this guy he is in (in code is 01)
                         nrf_pwrup();
                         PT_YIELD_TIME_msec(2);
                         nrf_send_payload(&msg, 1);
-                        PT_YIELD_TIME_msec(2);
                         nrf_pwrdown();
-                        PT_YIELD_TIME_msec(2);
-                        tft_setCursor(0, 200);
-                        tft_setTextColor(ILI9340_BLUE);
-                        tft_setTextSize(2);
-                        tft_writeString("N/C");
-                    } while (error);
-                            
-                    for (i = 0; i < 4; i++) {
-                        if (player_ids[i] == 0) {
-                            player_ids[i] = curr_id; // put new id in array
-                            player_health[i] = 8;
-                            players += 1; // keep count of players in game
-                            break;
+               
+
+                    
+                        
+                        if(!error){
+                            for (i = 0; i < 4; i++) {
+                                if (player_ids[i] == 0) {
+                                    player_ids[i] = curr_id; // put new id in array
+                                    player_health[i] = 8;
+                                    players += 1; // keep count of players in game
+                                    break;
+                                }
+                            }
                         }
-                    }
+                        error = 0;
                 }
 
                 joined = 0;
@@ -267,6 +264,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
 
                 // display players
                 displayScoreBoard();
+        
 
             }
             if (button_press == 1) { // if button was pressed go to play state

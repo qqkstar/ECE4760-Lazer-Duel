@@ -276,11 +276,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
     PT_BEGIN(pt);
     while (1) {
         while (state == IDLE_STATE) {
-            //PT_YIELD_TIME_msec(2);
-            mPORTBSetBits(LIFE_LED);
-            PT_YIELD_TIME_msec(5000);
-            mPORTBClearBits(LIFE_LED);
-            PT_YIELD_TIME_msec(5000);
+            PT_YIELD_TIME_msec(2);
         }
 
         while (state == JOIN_STATE) {
@@ -289,15 +285,12 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
             nrf_pwrup();
             PT_YIELD_TIME_msec(2);
             nrf_send_payload(&ticket, 1);
-            PT_YIELD_TIME_msec(2);
             nrf_pwrdown();
-            PT_YIELD_TIME_msec(2);
             nrf_pwrup();
             PT_YIELD_TIME_msec(2);
             nrf_rx_mode(); // wait for confirmation of join
-            PT_YIELD_TIME_msec(1000);
+            PT_YIELD_TIME_msec(2000);
             nrf_pwrdown();
-            PT_YIELD_TIME_msec(2);
             receive = RX_payload[0];
             curr_id = (receive & 0xC0) >> 6;
             curr_code = (receive & 0x30) >> 4;
@@ -307,7 +300,6 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 if (((receive & 0xC0) >> 6) == id) { // check if confirmation was for correct gun
                     state = WAIT_STATE; // wait for game to begin
                     nrf_pwrup();
-                    PT_YIELD_TIME_msec(2);
                 } else {
 
                 }

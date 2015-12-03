@@ -107,6 +107,7 @@ void nrf_read_payload(char * buff){
         buff[i] = rf_spiwrite(nrf24l01_SEND_CLOCK);
     }
     _csn = 1; // end transmission
+
 }
 
 //Sets the power up bit and waits for the startup time, putting the radio in Standby-I mode
