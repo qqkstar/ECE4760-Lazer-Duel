@@ -261,6 +261,7 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
 
         while (state == PLAY_STATE) {
             if (alive) { // check if player has not been hit
+               
                 if (mPORTAReadBits(BIT_1)) { // check if player has shot the gun
                     OC1RS = 842; // duty cycle of IR emitter (shoot gun)
                     mPORTBSetBits(SHOOT_LED); // blink LED to signal the player has shot
@@ -309,14 +310,16 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
             PT_YIELD_TIME_msec(500);
         }
         // END WHILE(1)
-        PT_END(pt);
+        PT_YIELD_TIME_msec(500);
     } // timer thread
+    PT_END(pt);
 }
+
 
 static PT_THREAD(protothread_radio(struct pt * pt)) {
     PT_BEGIN(pt);
     while (1) {
-        while (state == IDLE_STATE) {
+        while (state == IDLE_STATE) {           
             PT_YIELD_TIME_msec(2);
         }
 
@@ -371,9 +374,17 @@ static PT_THREAD(protothread_radio(struct pt * pt)) {
 
         while (state == PLAY_STATE) {
             // send current life to base station
+            nrf_pwrdown();
+            nrf_pwrup();
+            PT_YIELD_TIME_msec(2);
             error = 0;
             msg = ((id << 6) | life_cnt);
             nrf_send_payload(&msg, 1);
+            nrf_pwrdown();
+            nrf_pwrup();
+            PT_YIELD_TIME_msec(2);
+            nrf_rx_mode(); // see if end game message was sent
+            PT_YIELD_TIME_msec(2000);
             if (received) { // if a message was received
                 parsePacket();
                 if (curr_code == 0b11) { // if the message is a game over message
@@ -383,16 +394,16 @@ static PT_THREAD(protothread_radio(struct pt * pt)) {
                 }
                 received = 0;
             }
-            nrf_pwrdown();
-            nrf_pwrup();
-            PT_YIELD_TIME_msec(2);
-            nrf_rx_mode(); // see if end game message was sent
-            PT_YIELD_TIME_msec(2000);
         }
         
         while(state == END_STATE){
             PT_YIELD_TIME_msec(2000);
         }
+        
+        mPORTBSetBits(LIFE_LED);
+        PT_YIELD_TIME_msec(500);
+        mPORTBClearBits(LIFE_LED);
+        PT_YIELD_TIME_msec(500);
     }
     PT_END(pt);
 } // timer thread

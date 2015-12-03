@@ -154,7 +154,6 @@ void sendEndGame() {
         nrf_send_payload(&msg, 1);
         delay_ms(2);
         nrf_pwrdown();
-        delay_ms(2);
     }
 }
 
