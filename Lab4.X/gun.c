@@ -61,7 +61,7 @@ static char receive;
 static char ticket;
 static char msg;
 static int joined = 0;
-static char id = 1; 
+static char id = 2; 
 static char idle = 1; 
 
 char curr_id = 0;
@@ -245,15 +245,16 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
         // state where gun attempts to join game before game start
         while(state == JOIN_STATE){
             while(!joined){ // when the gun is still trying to join the game
-                PT_YIELD_TIME_msec(100); // yield to give radio time to signal base station
+                PT_YIELD_TIME_msec(1000); // yield to give radio time to signal base station
             }
-            PT_YIELD_TIME_msec(100); // wait for radio to receive start game signal
+            PT_YIELD_TIME_msec(1000); // wait for radio to receive start game signal
             if(received){
                 receive = RX_payload[0]; // check what message was received
                 curr_id = (receive & 0xC0) >> 6;
                 curr_code = (receive & 0x30) >> 4;
                 curr_pay = (receive & 0x0F);
-                if((curr_id == id) && (curr_code == 0x10)){ // if the payload is a game start for the right gun
+                mPORTBSetBits(LIFE_LED);
+                if(curr_code == 0b10){ // if the payload is a game start for the right gun
                     mPORTBSetBits(LIFE_LED); // turn on the life LED to signal game start
                     playSound1(); // play sound to signal start of game
                     lives = 0xFF;
@@ -263,6 +264,8 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
                     state = PLAY_STATE;
                 }
                 else{ // if the payload wasn't for a game start do clear the flag
+                    mPORTBClearBits(LIFE_LED);
+                    mPORTBSetBits(SHOOT_LED);
                     received = 0;
                 }
             }
@@ -353,6 +356,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                     received = 0;
                     if(((receive & 0xC0) >> 6) == id){ // check if confirmation was for correct gun
                         joined = 1; // flag that the game was joined successfully
+                        nrf_pwrup();
                     }else{
 
                     }
@@ -361,11 +365,8 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
             }
             else{ // if game was joined wait for game start message
                 if(!received){
-                    nrf_pwrup();
-                    PT_YIELD_TIME_msec(2);
                     nrf_rx_mode(); // wait for confirmation of join
-                    PT_YIELD_TIME_msec(1000);
-                    nrf_pwrdown();
+                    PT_YIELD_TIME_msec(100);
                 }
                 else{
                     nrf_pwrdown();

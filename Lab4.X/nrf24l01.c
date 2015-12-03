@@ -197,7 +197,6 @@ void nrf_send_payload(char * data, int len){
     while(!(sent) && !(error)){ // wait until data sent interrupt triggers
         
     }
-    error = 0;
     sent = 0;
     _ce = 0; // transition to standby II mode
     nrf_pwrdown(); // power down radio

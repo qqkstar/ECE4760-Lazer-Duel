@@ -137,7 +137,7 @@ void displayScoreBoard(){
 // signal players that game has ended
 void sendEndGame(){
     for(i=0;i<players;i++){
-        msg = (player_ids[i] << 6) | (0x11 << 4) | (player_health[i]); // signal each player that the game has ended
+        msg = (player_ids[i] << 6) | (0b11 << 4) | (player_health[i]); // signal each player that the game has ended
         // send the message
         nrf_pwrup();
         delay_ms(2);
@@ -217,48 +217,13 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
             
             
             if (received) {
-                
-//                tft_fillScreen(ILI9340_BLACK);
-//                tft_setCursor(0, 60);
-//                tft_setTextColor(ILI9340_MAGENTA);
-//                tft_setTextSize(2);
-//                tft_writeString("Sent");
-//                nrf_read_reg(nrf24l01_STATUS, &status, 1);
-//                
-//                tft_setCursor(0, 80);
-//                tft_setTextColor(ILI9340_YELLOW);
-//                tft_setTextSize(2);
-//                sprintf(buffer, "%X", receive);
-//                tft_writeString(buffer);
-//                received = 0;
-//                nrf_flush_rx();
-//                
-//                
-//                tft_setCursor(0, 100);
-//                tft_setTextColor(ILI9340_YELLOW);
-//                tft_setTextSize(2);
-//                sprintf(buffer, "%X", curr_id);
-//                tft_writeString(buffer);
-//                
-//                tft_setCursor(0, 120);
-//                tft_setTextColor(ILI9340_YELLOW);
-//                tft_setTextSize(2);
-//                sprintf(buffer, "%X", curr_code);
-//                tft_writeString(buffer);
-//                
-//                tft_setCursor(0, 140);
-//                tft_setTextColor(ILI9340_YELLOW);
-//                tft_setTextSize(2);
-//                sprintf(buffer, "%X", curr_pay);
-//                tft_writeString(buffer);
-
                 receive = RX_payload[0];
                 curr_id = (receive & 0xC0) >> 6;
                 curr_code = (receive & 0x30) >> 4;
                 curr_pay = (receive & 0x0F);
                 //PT_YIELD_TIME_msec(1000);
                  
-                receive = 0;
+                received = 0;
                 for(i=0;i<4;i++){
                     if((curr_id == player_ids[i]) && (curr_id != 0)){ // check if player has already joined game
                         joined = 1;
@@ -276,7 +241,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 }
                 
                 joined = 0;
-                msg = (curr_id << 6) | (0x01 << 4); //Tell this guy he is in (in code is 01)
+                msg = (curr_id << 6) | (0b01 << 4); //Tell this guy he is in (in code is 01)
                 curr_id = 0;
                 nrf_pwrup();
                 PT_YIELD_TIME_msec(2);
@@ -291,16 +256,23 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
             }
             if(button_press == 1){ // if button was pressed go to play state
                 button_press = 0; // clear the press
-                for(i=0;i<players;i++){ // signal each player that game has begun
+                do{ // signal each player that game has begun
+                    error = 0;
                     nrf_pwrdown();
                     PT_YIELD_TIME_msec(2);
-                    msg = (player_ids[i] << 6) | (0x10 << 4); // send game start msg                    
+                    msg = (player_ids[i] << 6) | (0b10 << 4); // send game start msg                    
                     nrf_pwrup();
                     PT_YIELD_TIME_msec(2);
                     nrf_send_payload(&msg, 1);
                     PT_YIELD_TIME_msec(2);
-                }
-                tft_fillScreen(ILI9340_BLACK);
+                    if(error){
+                        tft_setCursor(0, 120);
+                        tft_setTextColor(ILI9340_RED);
+                        tft_setTextSize(2);
+                        tft_writeString("Error");
+                    }
+                }while(error);
+                //tft_fillScreen(ILI9340_BLACK);
                 state = PLAY_STATE; // go to play state
             }
         }
