@@ -10,6 +10,9 @@
       <itemPath>pt_cornell_TFT.h</itemPath>
       <itemPath>nrf24l01.h</itemPath>
       <itemPath>laser_8khz_packed.h</itemPath>
+      <itemPath>pain_8khz_packed.h</itemPath>
+      <itemPath>ready_8khz_packed.h</itemPath>
+      <itemPath>wasted_8khz_packed.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -250,6 +253,18 @@
         </C32Global>
       </item>
       <item path="cvref_sound.c" ex="true" overriding="false">
+        <C32>
+        </C32>
+        <C32-AR>
+        </C32-AR>
+        <C32-AS>
+        </C32-AS>
+        <C32-LD>
+        </C32-LD>
+        <C32CPP>
+        </C32CPP>
+        <C32Global>
+        </C32Global>
       </item>
       <item path="newmain.c" ex="true" overriding="false">
         <C32>

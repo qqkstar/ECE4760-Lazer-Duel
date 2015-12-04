@@ -36,11 +36,18 @@
 
 // volatiles for the stuff used in the ISR
 volatile unsigned int i_lazer, j_lazer, packed_lazer, DAC_value_lazer; // lazer variables
+volatile unsigned int i_wasted, j_wasted, packed_wasted, DAC_value_wasted; // wasted variables
+volatile unsigned int i_ready, j_ready, packed_ready, DAC_value_ready; // ready variables
+volatile unsigned int i_pain, j_pain, packed_pain, DAC_value_pain; // pain variables
+
 //volatile int CVRCON_setup; // stores the voltage ref config register after it is set up
 // contains digit speech waveform packed so that
 // low-order 4 bits is sample t and high order 4 bits is sample t+1
 
 #include "laser_8khz_packed.h"
+#include "wasted_8khz_packed.h"
+#include "pain_8khz_packed.h"
+#include "ready_8khz_packed.h"
 
 
 static struct pt pt3, pt_input, pt_output, pt_DMA_output ;
@@ -57,12 +64,40 @@ void __ISR(_TIMER_2_VECTOR, ipl2) Timer2Handler(void)
     mT2ClearIntFlag();
     // do the Direct Digital Synthesis
     j_lazer = i_lazer>>1;
-    if (~(i_lazer & 1)) packed_lazer = AllDigits[j_lazer] ;
+    if (~(i_lazer & 1)) packed_lazer = AllDigits_laser[j_lazer] ;
     if (i_lazer & 1) DAC_value_lazer = packed_lazer>>4 ; // upper 4 bits
     else  DAC_value_lazer = packed_lazer & 0x0f ; // lower 4 bits
     CVRCON = CVRCON_setup | DAC_value_lazer ;
     i_lazer++ ;
-    if (j_lazer>sizeof(AllDigits)) i_lazer = 0;
+    if (j_lazer>sizeof(AllDigits_laser)) i_lazer = 0;
+}
+
+void __ISR(_TIMER_3_VECTOR, ipl2) Timer3Handler(void)
+{
+    // clear the interrupt flag
+    mT3ClearIntFlag();
+    // do the Direct Digital Synthesis
+    j_wasted = i_wasted>>1;
+    if (~(i_wasted & 1)) packed_wasted = AllDigits_wasted[j_wasted] ;
+    if (i_wasted & 1) DAC_value_wasted = packed_wasted>>4 ; // upper 4 bits
+    else  DAC_value_wasted = packed_wasted & 0x0f ; // lower 4 bits
+    CVRCON = CVRCON_setup | DAC_value_wasted ;
+    i_wasted++ ;
+    if (j_wasted>sizeof(AllDigits_wasted)) i_wasted = 0;
+}
+
+void __ISR(_TIMER_4_VECTOR, ipl2) Timer4Handler(void)
+{
+    // clear the interrupt flag
+    mT4ClearIntFlag();
+    // do the Direct Digital Synthesis
+    j_pain = i_pain>>1;
+    if (~(i_pain & 1)) packed_pain = AllDigits_pain[j_pain] ;
+    if (i_pain & 1) DAC_value_pain = packed_pain>>4 ; // upper 4 bits
+    else  DAC_value_pain = packed_pain & 0x0f ; // lower 4 bits
+    CVRCON = CVRCON_setup | DAC_value_pain ;
+    i_pain++ ;
+    if (j_pain>sizeof(AllDigits_pain)) i_pain = 0;
 }
 
 static int timer_limit_1;
@@ -120,27 +155,48 @@ void playLaser(){
 }   
 
 // Play game over sound
-void playSound1(){
+void playWasted(){
 
-    DmaChnEnable(dmaChn);
-    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, timer_limit_1);
-    OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 50000);
-    ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
-    // Clear interrupt flag
-    mT5ClearIntFlag();
+        i_wasted = 0;  //clear 
+        j_wasted = 0;
+        packed_wasted = 0;
+        DAC_value_wasted = 0;
+        // set up the Vref pin and use as a DAC
+        // enable module| eanble output | use low range output | use internal reference | desired step
+        CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
+        // And read back setup from CVRCON for speed later
+        // 0x8060 is enabled with output enabled, Vdd ref, and 0-0.6(Vdd) range
+        CVRCON_setup = CVRCON; //CVRCON = 0x8060 from Tahmid http://tahmidmc.blogspot.com/
+
+        // Set up timer2 on,  interrupts, internal clock, prescalar 1, toggle rate
+        // For voice synth run at 8 kHz
+        OpenTimer3(T3_ON | T3_SOURCE_INT | T3_PS_1_1, 3000);
+        // set up the timer interrupt with a priority of 2
+        ConfigIntTimer3(T3_INT_ON | T3_INT_PRIOR_2);
+        mT3ClearIntFlag(); // and clear the interrupt flag
    
 }
 
 // Play score decrease sound
-void playSound2(){
+void playPain(){
 
-    DmaChnEnable(dmaChn);
-    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, timer_limit_2);
-    OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 50000);
-    ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
-    // Clear interrupt flag
-    mT5ClearIntFlag();
-    
+        i_pain = 0;  //clear 
+        j_pain = 0;
+        packed_pain = 0;
+        DAC_value_pain = 0;
+        // set up the Vref pin and use as a DAC
+        // enable module| eanble output | use low range output | use internal reference | desired step
+        CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
+        // And read back setup from CVRCON for speed later
+        // 0x8060 is enabled with output enabled, Vdd ref, and 0-0.6(Vdd) range
+        CVRCON_setup = CVRCON; //CVRCON = 0x8060 from Tahmid http://tahmidmc.blogspot.com/
+
+        // Set up timer2 on,  interrupts, internal clock, prescalar 1, toggle rate
+        // For voice synth run at 8 kHz
+        OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, 3000);
+        // set up the timer interrupt with a priority of 2
+        ConfigIntTimer3(T4_INT_ON | T4_INT_PRIOR_2);
+        mT4ClearIntFlag(); // and clear the interrupt flag
 }
 
 // Play score increase sound
@@ -192,7 +248,7 @@ static PT_THREAD (protothread_timer(struct pt *pt))
              PT_YIELD_TIME_msec(10);
               SPI1_transfer(lives);
               CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
-              playSound2();
+              playPain();
               
               PT_YIELD_TIME_msec(2000);
               playSound3();

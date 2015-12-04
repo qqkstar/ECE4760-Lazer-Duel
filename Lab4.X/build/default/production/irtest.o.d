@@ -7,4 +7,7 @@ pt_cornell_TFT.h  \
 lc.h  \
 lc-switch.h  \
 pt.h  \
-laser_8khz_packed.h 
+laser_8khz_packed.h  \
+ wasted_8khz_packed.h  \
+pain_8khz_packed.h  \
+ready_8khz_packed.h 
