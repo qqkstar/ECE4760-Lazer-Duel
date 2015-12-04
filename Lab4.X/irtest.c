@@ -35,7 +35,7 @@
 // DataPin (SPI1)                    <-- RB5 (pin 14)
 
 // volatiles for the stuff used in the ISR
-volatile unsigned int i, j, packed, DAC_value; // voice variables
+volatile unsigned int i_lazer, j_lazer, packed_lazer, DAC_value_lazer; // lazer variables
 //volatile int CVRCON_setup; // stores the voltage ref config register after it is set up
 // contains digit speech waveform packed so that
 // low-order 4 bits is sample t and high order 4 bits is sample t+1
@@ -56,13 +56,13 @@ void __ISR(_TIMER_2_VECTOR, ipl2) Timer2Handler(void)
     // clear the interrupt flag
     mT2ClearIntFlag();
     // do the Direct Digital Synthesis
-    j = i>>1;
-    if (~(i & 1)) packed = AllDigits[j] ;
-    if (i & 1) DAC_value = packed>>4 ; // upper 4 bits
-    else  DAC_value = packed & 0x0f ; // lower 4 bits
-    CVRCON = CVRCON_setup | DAC_value ;
-    i++ ;
-    if (j>sizeof(AllDigits)) i = 0;
+    j_lazer = i_lazer>>1;
+    if (~(i_lazer & 1)) packed_lazer = AllDigits[j_lazer] ;
+    if (i_lazer & 1) DAC_value_lazer = packed_lazer>>4 ; // upper 4 bits
+    else  DAC_value_lazer = packed_lazer & 0x0f ; // lower 4 bits
+    CVRCON = CVRCON_setup | DAC_value_lazer ;
+    i_lazer++ ;
+    if (j_lazer>sizeof(AllDigits)) i_lazer = 0;
 }
 
 static int timer_limit_1;
@@ -99,22 +99,24 @@ void SPI1_transfer( int data)
 }
 
 void playLaser(){
-    // set up the Vref pin and use as a DAC
+        i_lazer = 0;  //clear 
+        j_lazer = 0;
+        packed_lazer = 0;
+        DAC_value_lazer = 0;
+        // set up the Vref pin and use as a DAC
         // enable module| eanble output | use low range output | use internal reference | desired step
         CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
         // And read back setup from CVRCON for speed later
         // 0x8060 is enabled with output enabled, Vdd ref, and 0-0.6(Vdd) range
         CVRCON_setup = CVRCON; //CVRCON = 0x8060 from Tahmid http://tahmidmc.blogspot.com/
-            
+
         // Set up timer2 on,  interrupts, internal clock, prescalar 1, toggle rate
         // For voice synth run at 8 kHz
-        OpenTimer2(T2_ON | T2_SOURCE_INT | T2_PS_1_1, 2500);
-        OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 65000);
+        OpenTimer2(T2_ON | T2_SOURCE_INT | T2_PS_1_1, 3000);
         // set up the timer interrupt with a priority of 2
         ConfigIntTimer2(T2_INT_ON | T2_INT_PRIOR_2);
-        ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
+        //ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
         mT2ClearIntFlag(); // and clear the interrupt flag
-        mT5ClearIntFlag();
 }   
 
 // Play game over sound
