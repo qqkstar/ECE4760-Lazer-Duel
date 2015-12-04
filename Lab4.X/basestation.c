@@ -248,15 +248,11 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                         PT_YIELD_TIME_msec(2);
                         nrf_send_payload(&msg, 1);
                         nrf_pwrdown();
-               
-
-                    
-                        
                         if(!error){
                             for (i = 0; i < 4; i++) {
                                 if (player_ids[i] == 0) {
                                     player_ids[i] = curr_id; // put new id in array
-                                    player_health[i] = 8;
+                                    player_health[i] = curr_pay;
                                     players += 1; // keep count of players in game
                                     break;
                                 }
@@ -291,8 +287,6 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                         tft_setTextColor(ILI9340_RED);
                         tft_setTextSize(2);
                         tft_writeString("Error");
-
-
 
                         tft_setCursor(0, 150);
                         tft_setTextColor(ILI9340_GREEN);
@@ -329,8 +323,8 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
 
             while (received) { // when data has been received
                 parsePacket();
-                if (curr_code == 10) { // if the data is how much life a player has
-                    for (i = 1; i < players; i++) {
+                if (curr_code == 0b10) { // if the data is how much life a player has
+                    for (i = 0; i < players; i++) {
                         if (player_ids[i] == curr_id) { // determine which player sent the payload 
                             player_health[i] = curr_pay; // update the player's health
                         }
@@ -339,6 +333,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 // reset flags
                 received = 0;
                 receive = 0;
+                tft_fillScreen(ILI9340_BLACK);
                 displayScoreBoard(); // display updated health of players
             }
 

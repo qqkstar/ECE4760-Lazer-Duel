@@ -62,7 +62,7 @@ static char receive;
 static char ticket;
 static char msg;
 static int joined = 0;
-static char id = 1;
+static char id = 2;
 static char idle = 1;
 
 char curr_id = 0;
@@ -324,7 +324,7 @@ static PT_THREAD(protothread_radio(struct pt * pt)) {
 
         while (state == JOIN_STATE) {
             mPORTBSetBits(SHOOT_LED);
-            ticket = (id << 6); // send id with request to join game
+            ticket = ((id << 6) | life_cnt); // send id with request to join game
             nrf_pwrup();
             PT_YIELD_TIME_msec(2);
             nrf_send_payload(&ticket, 1);
@@ -377,7 +377,7 @@ static PT_THREAD(protothread_radio(struct pt * pt)) {
             nrf_pwrup();
             PT_YIELD_TIME_msec(2);
             error = 0;
-            msg = ((id << 6) | life_cnt);
+            msg = ((id << 6) | (0b10 << 4) | life_cnt);
             nrf_send_payload(&msg, 1);
             nrf_pwrdown();
             nrf_pwrup();
