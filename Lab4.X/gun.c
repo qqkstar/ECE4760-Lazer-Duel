@@ -62,7 +62,7 @@ static char receive;
 static char ticket;
 static char msg;
 static int joined = 0;
-static char id = 2;
+static char id = 1;
 static char idle = 1;
 
 char curr_id = 0;
@@ -164,6 +164,12 @@ void radioSetup() {
     char disable_ack = nrf24l01_EN_AA_ENAA_NONE;
     //nrf_write_reg(nrf24l01_EN_AA, &disable_ack, 1);
 
+    char autoack = nrf24l01_EN_AA_ENAA_NONE;
+    nrf_write_reg(nrf24l01_EN_AA, &autoack, 1);
+    char disable_retry = nrf24l01_SETUP_RETR_ARC_0;
+    nrf_write_reg(nrf24l01_SETUP_RETR, &disable_retry, 1);
+    nrf_flush_rx();
+    
     //_TRIS_LEDRED = 0;
     //_TRIS_LEDYELLOW = 0;
     //_LEDRED = 0;

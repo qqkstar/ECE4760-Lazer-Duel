@@ -101,6 +101,10 @@ void radioSetup() {
     nrf_write_reg(nrf24l01_RX_PW_P5, &payload_size, 1);
     //nrf_write_reg(nrf24l01_SETUP_RETR, &retry_num, 1);
 
+    char autoack = nrf24l01_EN_AA_ENAA_NONE;
+    nrf_write_reg(nrf24l01_EN_AA, &autoack, 1);
+    char disable_retry = nrf24l01_SETUP_RETR_ARC_0;
+    nrf_write_reg(nrf24l01_SETUP_RETR, &disable_retry, 1);
     nrf_flush_rx();
 
 }
