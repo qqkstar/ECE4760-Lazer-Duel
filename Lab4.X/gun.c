@@ -253,12 +253,17 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
             PT_YIELD_TIME_msec(2);
             if (mPORTAReadBits(BIT_1)) { // wait for trigger press
                 state = JOIN_STATE; // go to join game state
+                nrf_pwrdown();
+                nrf_pwrup();
             }
         }
 
         // state where gun attempts to join game before game start
         while (state == JOIN_STATE) {
             PT_YIELD_TIME_msec(100);
+            if (mPORTAReadBits(BIT_1)) { // wait for trigger press
+                state = WAIT_STATE; // go to join game state
+            }
         }
 
         while (state == WAIT_STATE) {
@@ -327,33 +332,12 @@ static PT_THREAD(protothread_radio(struct pt * pt)) {
         while (state == IDLE_STATE) {           
             PT_YIELD_TIME_msec(2);
         }
-
+        
         while (state == JOIN_STATE) {
             mPORTBSetBits(SHOOT_LED);
             ticket = ((id << 6) | life_cnt); // send id with request to join game
-            nrf_pwrup();
             PT_YIELD_TIME_msec(2);
             nrf_send_payload(&ticket, 1);
-            nrf_pwrdown();
-            nrf_pwrup();
-            PT_YIELD_TIME_msec(2);
-            nrf_rx_mode(); // wait for confirmation of join
-            PT_YIELD_TIME_msec(2000);
-            nrf_pwrdown();
-            receive = RX_payload[0];
-            curr_id = (receive & 0xC0) >> 6;
-            curr_code = (receive & 0x30) >> 4;
-            curr_pay = (receive & 0x0F);
-            if (received == 1) { // if confirmation was received 
-                received = 0;
-                if (((receive & 0xC0) >> 6) == id) { // check if confirmation was for correct gun
-                    state = WAIT_STATE; // wait for game to begin
-                    nrf_pwrup();
-                } else {
-
-                }
-                nrf_flush_rx();
-            }
         }
 
         while (state == WAIT_STATE) {

@@ -190,10 +190,10 @@ void reset() {
 void __ISR(_EXTERNAL_0_VECTOR, ipl2) INT0Interrupt() {
     while (mPORTBReadBits(BIT_7)) {
         count++;
-        if (count > 1100) {
-        }
+//        if (count > 750) {
+//        }
     }
-    if (count > 1000) { // debounce button
+    if (count > 700) { // debounce button
         button_press = 1;
     }
     count = 0;
@@ -218,24 +218,16 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 button_press = 0; // clear button press
                 tft_fillScreen(ILI9340_BLACK);
                 state = JOIN_STATE; // go to the join game state
+                nrf_pwrup();
             }
         }
 
         while (state == JOIN_STATE) {//Letting people into the game
-            nrf_pwrup();
-            PT_YIELD_TIME_msec(2);
             nrf_rx_mode();
-            PT_YIELD_TIME_msec(2000);
-            nrf_pwrdown();
-     
-            curr_id = 0;
-
+            PT_YIELD_TIME_msec(2);
             if (received) {
                        
-                receive = RX_payload[0];
-                curr_id = (receive & 0xC0) >> 6;
-                curr_code = (receive & 0x30) >> 4;
-                curr_pay = (receive & 0x0F);
+                parsePacket();
                 received = 0;
                 
                 for (i = 0; i < 4; i++) {
@@ -245,66 +237,39 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 }
 
                 if (!joined) { // if the player has not already joined the game
-                    //do {
-                        error = 0;
-                        msg = (curr_id << 6) | (0b01 << 4) ; //Tell this guy he is in (in code is 01)
-                        nrf_pwrup();
-                        PT_YIELD_TIME_msec(2);
-                        nrf_send_payload(&msg, 1);
-                        nrf_pwrdown();
-                        if(!error){
-                            for (i = 0; i < 4; i++) {
-                                if (player_ids[i] == 0) {
-                                    player_ids[i] = curr_id; // put new id in array
-                                    player_health[i] = curr_pay;
-                                    players += 1; // keep count of players in game
-                                    break;
-                                }
-                            }
+                    for (i = 0; i < 4; i++) {
+                        if (player_ids[i] == 0) {
+                            player_ids[i] = curr_id; // put new id in array
+                            player_health[i] = curr_pay;
+                            players += 1; // keep count of players in game
+                            break;
                         }
-                        error = 0;
+                    }
                 }
-
-                joined = 0;
-
-
-                // display players
-                displayScoreBoard();
-        
-
             }
+
+            joined = 0;
+
+
+            // display players
+            displayScoreBoard();
+            
             if (button_press == 1) { // if button was pressed go to play state
                 button_press = 0; // clear the press
-                do { // signal each player that game has begun
-                    error = 0;
-                    nrf_pwrdown();
-                    PT_YIELD_TIME_msec(2);
-                    msg = (0b10 << 4); // send game start msg
-                    nrf_pwrup();
-                    PT_YIELD_TIME_msec(2);
-                    nrf_send_payload(&msg, 1);
-                    i++;
-                    PT_YIELD_TIME_msec(2);
-                    if (error) {
-                        tft_fillScreen(ILI9340_BLACK);
-                        tft_setCursor(0, 120);
-                        tft_setTextColor(ILI9340_RED);
-                        tft_setTextSize(2);
-                        tft_writeString("Error");
-
-                        tft_setCursor(0, 150);
-                        tft_setTextColor(ILI9340_GREEN);
-                        tft_setTextSize(2);
-                        sprintf(buffer, "%d", i);
-                        tft_writeString(buffer);
-
-                    }
-                } while (error);
-                //tft_fillScreen(ILI9340_BLACK);
                 error = 0;
+                nrf_pwrdown();
+                PT_YIELD_TIME_msec(2);
+                msg = (0b10 << 4); // send game start msg
+                nrf_pwrup();
+                PT_YIELD_TIME_msec(2);
+                nrf_send_payload(&msg, 1);
+                i++;
+                PT_YIELD_TIME_msec(2);
+                //tft_fillScreen(ILI9340_BLACK);
                 state = PLAY_STATE; // go to play state
             }
         }
+        
         while (state == PLAY_STATE) { // While game is in progress
             tft_setCursor(0, 160);
             tft_setTextColor(ILI9340_BLUE);
