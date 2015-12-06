@@ -62,7 +62,7 @@ static char receive;
 static char ticket;
 static char msg;
 static int joined = 0;
-static char id = 1;
+static char id = 2;
 static char idle = 1;
 
 char curr_id = 0;
@@ -388,7 +388,7 @@ static PT_THREAD(protothread_radio(struct pt * pt)) {
             nrf_pwrup();
             PT_YIELD_TIME_msec(2);
             nrf_rx_mode(); // see if end game message was sent
-            PT_YIELD_TIME_msec(2000);
+            PT_YIELD_TIME_msec(200);
             if (received) { // if a message was received
                 parsePacket();
                 if (curr_code == 0b11) { // if the message is a game over message
