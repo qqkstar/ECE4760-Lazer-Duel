@@ -195,13 +195,13 @@ void nrf_send_payload(char * data, int len){
     nrf_flush_tx(); // clear the TX FIFO so for a new transmission
     nrf_write_payload(data, len);
     nrf_tx_mode();
-    while(!(sent) && !(error)){ // wait until data sent interrupt triggers
+    while(!(sent)){ // wait until data sent interrupt triggers
         TRISBbits.TRISB3 = 0;
         LATBbits.LATB3 = 1;
     }
     LATBbits.LATB3 = 0;
     sent = 0;
-    _ce = 0; // transition to standby II mode
+    //_ce = 0; // transition to standby II mode
     
 }
 

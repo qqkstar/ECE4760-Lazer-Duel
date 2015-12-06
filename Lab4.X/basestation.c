@@ -110,15 +110,22 @@ void radioSetup() {
 }
 
 // disassembles a packet
-void parsePacket() {
+int parsePacket() {
     receive = RX_payload[0]; // check what message was received
     curr_id = (receive & 0xC0) >> 6;
     curr_code = (receive & 0x30) >> 4;
     curr_pay = (receive & 0x0F);
+    
+    if(curr_pay > 8 | curr_id > 3 | curr_code > 3){
+        return 0;
+    }else{
+        return 1;
+    }
 }
 
 // Displays all players' health on TFT
 void displayScoreBoard() {
+    
     for (i = 0; i < players; i++) {
         tft_setCursor(0, 80 + i * 20);
         tft_setTextColor(ILI9340_YELLOW);
@@ -156,7 +163,7 @@ void sendEndGame() {
         nrf_pwrup();
         delay_ms(2);
         nrf_send_payload(&msg, 1);
-        delay_ms(2);
+        delay_ms(10);
         nrf_pwrdown();
     }
 }
@@ -218,33 +225,41 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 button_press = 0; // clear button press
                 tft_fillScreen(ILI9340_BLACK);
                 state = JOIN_STATE; // go to the join game state
+                nrf_flush_rx();
                 nrf_pwrup();
+                PT_YIELD_TIME_msec(2);
             }
         }
 
         while (state == JOIN_STATE) {//Letting people into the game
             nrf_rx_mode();
-            PT_YIELD_TIME_msec(2);
+            PT_YIELD_TIME_msec(200);
             if (received) {
                        
-                parsePacket();
+                static int proper;
+                proper = parsePacket();
                 received = 0;
-                
-                for (i = 0; i < 4; i++) {
-                    if ((curr_id == player_ids[i]) && (curr_id != 0)) { // check if player has already joined game
-                        joined = 1;
-                    }
-                }
-
-                if (!joined) { // if the player has not already joined the game
+                if(proper){
+                    nrf_flush_rx();
+                    nrf_flush_tx();
                     for (i = 0; i < 4; i++) {
-                        if (player_ids[i] == 0) {
-                            player_ids[i] = curr_id; // put new id in array
-                            player_health[i] = curr_pay;
-                            players += 1; // keep count of players in game
-                            break;
+                        if ((curr_id == player_ids[i]) && (curr_id != 0)) { // check if player has already joined game
+                            joined = 1;
                         }
                     }
+
+                    if (!joined) { // if the player has not already joined the game
+                        for (i = 0; i < 4; i++) {
+                            if (player_ids[i] == 0) {
+                                player_ids[i] = curr_id; // put new id in array
+                                player_health[i] = curr_pay;
+                                players += 1; // keep count of players in game
+                                break;
+                            }
+                        }
+                    }
+                    nrf_flush_rx();
+                     displayScoreBoard();
                 }
             }
 
@@ -252,19 +267,24 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
 
 
             // display players
-            displayScoreBoard();
+           
             
             if (button_press == 1) { // if button was pressed go to play state
+                nrf_flush_tx();
+                nrf_flush_rx();
                 button_press = 0; // clear the press
                 error = 0;
                 nrf_pwrdown();
                 PT_YIELD_TIME_msec(2);
                 msg = (0b10 << 4); // send game start msg
+                
                 nrf_pwrup();
-                PT_YIELD_TIME_msec(2);
+                PT_YIELD_TIME_msec(5);
+                nrf_flush_tx();
+                nrf_flush_rx();
+                PT_YIELD_TIME_msec(5);
                 nrf_send_payload(&msg, 1);
-                i++;
-                PT_YIELD_TIME_msec(2);
+                PT_YIELD_TIME_msec(20);
                 //tft_fillScreen(ILI9340_BLACK);
                 state = PLAY_STATE; // go to play state
             }
@@ -346,6 +366,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
 
 void main(void) {
     INTEnableSystemMultiVectoredInt();
+    //reset();
     PT_setup();
     buttonSetup();
     TRISAbits.TRISA0 = 0;
@@ -353,7 +374,7 @@ void main(void) {
     PT_INIT(&pt_radio);
 
     radioSetup();
-
+    
     tft_init_hw();
     tft_begin();
     tft_fillScreen(ILI9340_BLACK);
@@ -361,7 +382,12 @@ void main(void) {
     tft_setRotation(0); // Use tft_setRotation(1) for 320x240
 
     TX = 0;
-
+    
+     for (i = 0; i < 4; i++) {
+        player_ids[i] = 0;
+        player_health[i] = 0;
+    }
+    
     while (1) {
         PT_SCHEDULE(protothread_radio(&pt_radio));
     }

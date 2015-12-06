@@ -169,7 +169,7 @@ void radioSetup() {
     char disable_retry = nrf24l01_SETUP_RETR_ARC_0;
     nrf_write_reg(nrf24l01_SETUP_RETR, &disable_retry, 1);
     nrf_flush_rx();
-    
+
     //_TRIS_LEDRED = 0;
     //_TRIS_LEDYELLOW = 0;
     //_LEDRED = 0;
@@ -252,9 +252,11 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
             //mPORTBClearBits(LIFE_LED); // turn off life LED
             PT_YIELD_TIME_msec(2);
             if (mPORTAReadBits(BIT_1)) { // wait for trigger press
+                while (mPORTAReadBits(BIT_1));
                 state = JOIN_STATE; // go to join game state
                 nrf_pwrdown();
                 nrf_pwrup();
+                PT_YIELD_TIME_msec(2);
             }
         }
 
@@ -271,9 +273,9 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
         }
 
         while (state == PLAY_STATE) {
-                CVRCON = 0; // turn off cvref
-                PT_YIELD_TIME_msec(10);
-                SPI1_transfer(lives); // display player's health
+            CVRCON = 0; // turn off cvref
+            PT_YIELD_TIME_msec(10);
+            SPI1_transfer(lives); // display player's health
             if (alive) { // check if player has not been hit               
                 if (mPORTAReadBits(BIT_1)) { // check if player has shot the gun
                     OC1RS = 842; // duty cycle of IR emitter (shoot gun)
@@ -307,6 +309,7 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
                 } else { // if player is out of lives
                     state = END_STATE;
                 }
+                
 
             }
         }
@@ -325,22 +328,29 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
     PT_END(pt);
 }
 
-
 static PT_THREAD(protothread_radio(struct pt * pt)) {
     PT_BEGIN(pt);
     while (1) {
-        while (state == IDLE_STATE) {           
+        while (state == IDLE_STATE) {
             PT_YIELD_TIME_msec(2);
         }
-        
+
         while (state == JOIN_STATE) {
+            nrf_pwrdown();
+            nrf_pwrup();
+            PT_YIELD_TIME_msec(2);
             mPORTBSetBits(SHOOT_LED);
-            ticket = ((id << 6) | life_cnt); // send id with request to join game
+            ticket = ((id << 6)); // send id with request to join game
             PT_YIELD_TIME_msec(2);
             nrf_send_payload(&ticket, 1);
+            PT_YIELD_TIME_msec(10);
+           
         }
 
         while (state == WAIT_STATE) {
+            nrf_pwrdown();
+            nrf_pwrup();
+            PT_YIELD_TIME_msec(2);
             nrf_rx_mode(); // wait for confirmation of join
             mPORTBSetBits(SHOOT_LED);
             PT_YIELD_TIME_msec(500);
@@ -369,6 +379,7 @@ static PT_THREAD(protothread_radio(struct pt * pt)) {
             error = 0;
             msg = ((id << 6) | (0b10 << 4) | life_cnt);
             nrf_send_payload(&msg, 1);
+            PT_YIELD_TIME_msec(10);
             nrf_pwrdown();
             nrf_pwrup();
             PT_YIELD_TIME_msec(2);
@@ -384,11 +395,11 @@ static PT_THREAD(protothread_radio(struct pt * pt)) {
                 received = 0;
             }
         }
-        
-        while(state == END_STATE){
+
+        while (state == END_STATE) {
             PT_YIELD_TIME_msec(2000);
         }
-        
+
         mPORTBSetBits(LIFE_LED);
         PT_YIELD_TIME_msec(500);
         mPORTBClearBits(LIFE_LED);
