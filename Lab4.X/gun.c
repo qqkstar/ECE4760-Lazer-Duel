@@ -401,13 +401,14 @@ static PT_THREAD(protothread_radio(struct pt * pt)) {
         }
 
         while (state == END_STATE) {
-            PT_YIELD_TIME_msec(2000);
+            nrf_pwrdown();
+            nrf_pwrup();
+            PT_YIELD_TIME_msec(2);
+            error = 0;
+            msg = ((id << 6) | (0b10 << 4) | life_cnt);
+            nrf_send_payload(&msg, 1);
+            PT_YIELD_TIME_msec(200);
         }
-
-        mPORTBSetBits(LIFE_LED);
-        PT_YIELD_TIME_msec(500);
-        mPORTBClearBits(LIFE_LED);
-        PT_YIELD_TIME_msec(500);
     }
     PT_END(pt);
 } // timer thread
