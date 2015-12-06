@@ -16,6 +16,11 @@
 #include "plib.h"
 #include "nrf24l01.h"
 
+#include "laser_8khz_packed.h"
+#include "pain_8khz_packed.h"
+#include "dead_8khz_packed.h"
+#include "ready_8khz_packed.h"
+
 //#define	SYS_FREQ 64000000
 #define SHOOT_LED BIT_0
 #define LIFE_LED BIT_1
@@ -43,9 +48,9 @@
 static int alive = 1; // goes low for a few seconds after being hit
 
 
-static int timer_limit_1;
-static int timer_limit_2;
-static int timer_limit_3;
+//static int timer_limit_1;
+//static int timer_limit_2;
+//static int timer_limit_3;
 
 volatile unsigned char sine_table[256];
 
@@ -71,6 +76,26 @@ char curr_pay = 0;
 
 int state = 0;
 
+int play_dead_sound = 0;
+
+// volatiles for the stuff used in the ISR
+volatile unsigned int i, j, packed, DAC_value; // lazer variables
+char sound;
+//volatile int CVRCON_setup; // stores the voltage ref config register after it is set up
+// contains digit speech waveform packed so that
+// low-order 4 bits is sample t and high order 4 bits is sample t+1
+
+//Helper function to iterate through array and output voltage through CVREF
+void playSound(unsigned char* AllDigits, int size) {
+    j = i>>1;
+    if (~(i & 1)) packed = AllDigits[j] ;
+    if (i & 1) DAC_value = packed>>4 ; // upper 4 bits
+    else  DAC_value = packed & 0x0f ; // lower 4 bits
+    CVRCON = CVRCON_setup | DAC_value ;
+    i++ ;
+    if (j>size) i = 0;
+}
+
 void SPI_setup() {
     TRISBbits.TRISB5 = 0; // configure pin RB as an output  
     PPSOutput(2, RPB5, SDO1); // map SDO1 to RB5
@@ -89,50 +114,143 @@ void SPI1_transfer(int data) {
     CloseSPI1();
 }
 
-// Play game over sound
+//play shooting sound
+void playLaser(){
+        i = 0;  //clear 
+        j = 0;
+        packed = 0;
+        DAC_value = 0;
+        sound = 'l';
+        // set up the Vref pin and use as a DAC
+        // enable module| eanble output | use low range output | use internal reference | desired step
+        CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
+        // And read back setup from CVRCON for speed later
+        // 0x8060 is enabled with output enabled, Vdd ref, and 0-0.6(Vdd) range
+        CVRCON_setup = CVRCON; //CVRCON = 0x8060 from Tahmid http://tahmidmc.blogspot.com/
 
-void playSound1() {
+        // Set up timer2 on,  interrupts, internal clock, prescalar 1, toggle rate
+        // For voice synth run at 8 kHz
+        OpenTimer2(T2_ON | T2_SOURCE_INT | T2_PS_1_1, 5000);
+        // set up the timer interrupt with a priority of 2
+        ConfigIntTimer2(T2_INT_ON | T2_INT_PRIOR_2);
+        //ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
+        mT2ClearIntFlag(); // and clear the interrupt flag
+}   
 
-    DmaChnEnable(dmaChn);
-    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, timer_limit_1);
-    OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 50000);
-    ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
-    // Clear interrupt flag
-    mT5ClearIntFlag();
+// Play losing life sound
+void playPain(){
+        i = 0;  //clear 
+        j = 0;
+        packed = 0;
+        DAC_value = 0;
+        sound = 'p';
+        // set up the Vref pin and use as a DAC
+        // enable module| eanble output | use low range output | use internal reference | desired step
+        CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
+        // And read back setup from CVRCON for speed later
+        // 0x8060 is enabled with output enabled, Vdd ref, and 0-0.6(Vdd) range
+        CVRCON_setup = CVRCON; //CVRCON = 0x8060 from Tahmid http://tahmidmc.blogspot.com/
 
+        // Set up timer2 on,  interrupts, internal clock, prescalar 1, toggle rate
+        // For voice synth run at 8 kHz
+        OpenTimer2(T2_ON | T2_SOURCE_INT | T2_PS_1_1, 3000);
+        // set up the timer interrupt with a priority of 2
+        ConfigIntTimer2(T2_INT_ON | T2_INT_PRIOR_2);
+        //ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
+        mT2ClearIntFlag(); // and clear the interrupt flag
+   
 }
 
-// Play score decrease sound
+// Play dead sound
+void playDead(){
+        i = 0;  //clear 
+        j = 0;
+        packed = 0;
+        DAC_value = 0;
+        sound = 'd';
+        // set up the Vref pin and use as a DAC
+        // enable module| eanble output | use low range output | use internal reference | desired step
+        CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
+        // And read back setup from CVRCON for speed later
+        // 0x8060 is enabled with output enabled, Vdd ref, and 0-0.6(Vdd) range
+        CVRCON_setup = CVRCON; //CVRCON = 0x8060 from Tahmid http://tahmidmc.blogspot.com/
 
-void playSound2() {
-
-    DmaChnEnable(dmaChn);
-    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, timer_limit_2);
-    OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 50000);
-    ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
-    // Clear interrupt flag
-    mT5ClearIntFlag();
-
+        // Set up timer2 on,  interrupts, internal clock, prescalar 1, toggle rate
+        // For voice synth run at 8 kHz
+        OpenTimer2(T2_ON | T2_SOURCE_INT | T2_PS_1_1, 5000);
+        // set up the timer interrupt with a priority of 2
+        ConfigIntTimer2(T2_INT_ON | T2_INT_PRIOR_2);
+        //ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
+        mT2ClearIntFlag(); // and clear the interrupt flag
 }
 
-// Play score increase sound
+// Play ready sound
+void playReady(){
+        i = 0;  //clear 
+        j = 0;
+        packed = 0;
+        DAC_value = 0;
+        sound = 'r';
+        // set up the Vref pin and use as a DAC
+        // enable module| eanble output | use low range output | use internal reference | desired step
+        CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
+        // And read back setup from CVRCON for speed later
+        // 0x8060 is enabled with output enabled, Vdd ref, and 0-0.6(Vdd) range
+        CVRCON_setup = CVRCON; //CVRCON = 0x8060 from Tahmid http://tahmidmc.blogspot.com/
 
-void playSound3() {
-
-    DmaChnEnable(dmaChn);
-    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, timer_limit_3);
-    OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 50000);
-    ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
-    // Clear interrupt flag
-    mT5ClearIntFlag();
+        // Set up timer2 on,  interrupts, internal clock, prescalar 1, toggle rate
+        // For voice synth run at 8 kHz
+        OpenTimer2(T2_ON | T2_SOURCE_INT | T2_PS_1_1, 6000);
+        // set up the timer interrupt with a priority of 2
+        ConfigIntTimer2(T2_INT_ON | T2_INT_PRIOR_2);
+        //ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
+        mT2ClearIntFlag(); // and clear the interrupt flag
 }
 
-void __ISR(_TIMER_5_VECTOR, ipl2) T5HandlerISR(void) {
-    mT5ClearIntFlag();
-    DmaChnDisable(dmaChn);
-    //CloseTimer2();
-    CloseTimer5();
-}
+//// Play game over sound
+//
+//void playSound1() {
+//
+//    DmaChnEnable(dmaChn);
+//    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, timer_limit_1);
+//    OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 50000);
+//    ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
+//    // Clear interrupt flag
+//    mT5ClearIntFlag();
+//
+//}
+//
+//// Play score decrease sound
+//
+//void playSound2() {
+//
+//    DmaChnEnable(dmaChn);
+//    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, timer_limit_2);
+//    OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 50000);
+//    ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
+//    // Clear interrupt flag
+//    mT5ClearIntFlag();
+//
+//}
+//
+//// Play score increase sound
+//
+//void playSound3() {
+//
+//    DmaChnEnable(dmaChn);
+//    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_1, timer_limit_3);
+//    OpenTimer5(T5_ON | T5_SOURCE_INT | T5_PS_1_256, 50000);
+//    ConfigIntTimer5(T5_INT_ON | T5_INT_PRIOR_2);
+//    // Clear interrupt flag
+//    mT5ClearIntFlag();
+//}
+//
+//void __ISR(_TIMER_5_VECTOR, ipl2) T5HandlerISR(void) {
+//    mT5ClearIntFlag();
+//    DmaChnDisable(dmaChn);
+//    //CloseTimer2();
+//    CloseTimer5();
+//}
 
 void parsePacket() {
     receive = RX_payload[0]; // check what message was received
@@ -182,9 +300,9 @@ void gunSetup() {
 
 
 
-    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_256, 65535);
-    // set up the timer interrupt with a priority of 2
-    ConfigIntTimer4(T4_INT_OFF | T4_INT_PRIOR_2);
+//    OpenTimer4(T4_ON | T4_SOURCE_INT | T4_PS_1_256, 65535);
+//    // set up the timer interrupt with a priority of 2
+//    ConfigIntTimer4(T4_INT_OFF | T4_INT_PRIOR_2);
 
     //period of 64000 should make the timer overflow frequency 38 kHz, the desired PWM frequency
     OpenTimer3(T3_ON | T3_SOURCE_INT | T3_PS_1_1, 1684);
@@ -201,9 +319,9 @@ void gunSetup() {
 
 
 
-    timer_limit_1 = SYS_FREQ / (256 * 900);
-    timer_limit_2 = SYS_FREQ / (256 * 200);
-    timer_limit_3 = SYS_FREQ / (256 * 300);
+//    timer_limit_1 = SYS_FREQ / (256 * 900);
+//    timer_limit_2 = SYS_FREQ / (256 * 200);
+//    timer_limit_3 = SYS_FREQ / (256 * 300);
 
 
     // set up the Vref pin and use as a DAC
@@ -211,23 +329,23 @@ void gunSetup() {
     //CVREFOpen( CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0 );
     // And read back setup from CVRCON for speed later
     // 0x8060 is enabled with output enabled, Vdd ref, and 0-0.6(Vdd) range
-    int i;
-    for (i = 0; i < 256; i++) {
-        sine_table[i] = (signed char) (8.0 * (sin((float) i * 6.283 / (float) 256) + sin((float) (4.5 * i * 6.283) / (float) 256)));
-        sine_table[i] = (sine_table[i] & 0x0F) | 0x8060;
-    }
+//    int i;
+//    for (i = 0; i < 256; i++) {
+//        sine_table[i] = (signed char) (8.0 * (sin((float) i * 6.283 / (float) 256) + sin((float) (4.5 * i * 6.283) / (float) 256)));
+//        sine_table[i] = (sine_table[i] & 0x0F) | 0x8060;
+//    }
 
     // Open the desired DMA channel.
     // We enable the AUTO option, we'll keep repeating the sam transfer over and over.
-    DmaChnOpen(dmaChn, 0, DMA_OPEN_AUTO);
+    //DmaChnOpen(dmaChn, 0, DMA_OPEN_AUTO);
 
     // set the transfer parameters: source & destination address, source & destination size, number of bytes per event
     // Setting the last parameter to one makes the DMA output one byte/interrupt
-    DmaChnSetTxfer(dmaChn, sine_table, (void*) &CVRCON, 256, 1, 1);
+    //DmaChnSetTxfer(dmaChn, sine_table, (void*) &CVRCON, 256, 1, 1);
 
     // set the transfer event control: what event is to start the DMA transfer
     // In this case, timer2
-    DmaChnSetEventControl(dmaChn, DMA_EV_START_IRQ(_TIMER_4_IRQ));
+    //DmaChnSetEventControl(dmaChn, DMA_EV_START_IRQ(_TIMER_4_IRQ));
 
     ConfigINT0(EXT_INT_ENABLE | FALLING_EDGE_INT | EXT_INT_PRI_2);
     EnableINT0;
@@ -281,8 +399,9 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
                     OC1RS = 842; // duty cycle of IR emitter (shoot gun)
                     mPORTBSetBits(SHOOT_LED); // blink LED to signal the player has shot
                     CVREFOpen(CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0);
-                    playSound1(); // play a shooting sound
-                    PT_YIELD_TIME_msec(100); // send the shot as a pulse
+                    playLaser(); // play a shooting sound
+                    PT_YIELD_TIME_msec(500); // send the shot as a pulse
+                    CloseTimer2();
                     OC1RS = 0; // turn off emitter
                     mPORTBClearBits(SHOOT_LED); // turn off shoot LED
                     CVRCON = 0;
@@ -293,10 +412,11 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
             } else { // if the player was shot
                 mPORTBClearBits(LIFE_LED); // turn off life LED to signal player was shot
                 CVREFOpen(CVREF_ENABLE | CVREF_OUTPUT_ENABLE | CVREF_RANGE_LOW | CVREF_SOURCE_AVDD | CVREF_STEP_0);
-                playSound2(); // play a hit sound
-                PT_YIELD_TIME_msec(2000);
+                playPain(); // play a hit sound
+                PT_YIELD_TIME_msec(500);
+                CloseTimer2();
                 if (lives != 0) { // if player hasn't run out of lives
-                    playSound3(); // play a back alive sound
+//                    playSound3(); // play a back alive sound
                     PT_YIELD_TIME_msec(200);
                     mPORTBSetBits(LIFE_LED); // turn back on life LED to signal player is alive
                     alive = 1;
@@ -309,8 +429,6 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
                 } else { // if player is out of lives
                     state = END_STATE;
                 }
-                
-
             }
         }
 
@@ -321,6 +439,13 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
             PT_YIELD_TIME_msec(500);
             mPORTBClearBits(SHOOT_LED);
             PT_YIELD_TIME_msec(500);
+            if (play_dead_sound==0) {
+                playDead();
+                PT_YIELD_TIME_msec(1300);
+                CloseTimer2();
+                play_dead_sound = 1;
+            }
+
         }
         // END WHILE(1)
         PT_YIELD_TIME_msec(500);
@@ -363,7 +488,9 @@ static PT_THREAD(protothread_radio(struct pt * pt)) {
             if (received) {
                 parsePacket();
                 if (curr_code == 0b10) { // if the payload is a game start for the right gun
-                    playSound1(); // play sound to signal start of game
+                    playReady(); // play sound to signal start of game
+                    PT_YIELD_TIME_msec(1300);
+                    CloseTimer2();
                     lives = 0xFF;
                     life_cnt = 8;
                     alive = 1;
@@ -394,7 +521,6 @@ static PT_THREAD(protothread_radio(struct pt * pt)) {
                 if (curr_code == 0b11) { // if the message is a game over message
                     nrf_pwrdown();
                     state = END_STATE;
-
                 }
                 received = 0;
             }
@@ -446,3 +572,20 @@ void __ISR(_EXTERNAL_0_VECTOR, ipl2) INT0Interrupt() {
 
 }
 
+void __ISR(_TIMER_2_VECTOR, ipl2) Timer2Handler(void)
+{
+    // clear the interrupt flag
+    mT2ClearIntFlag();
+    if (sound == 'l') {
+        playSound(AllDigits_laser, sizeof(AllDigits_laser));
+    }
+    else if (sound == 'p') {
+        playSound(AllDigits_pain, sizeof(AllDigits_pain));
+    }
+    else if (sound == 'd') {
+        playSound(AllDigits_dead, sizeof(AllDigits_dead));
+    }
+    else if (sound == 'r') {
+        playSound(AllDigits_ready, sizeof(AllDigits_ready));
+    }
+}

@@ -9,6 +9,10 @@
       <itemPath>config.h</itemPath>
       <itemPath>pt_cornell_TFT.h</itemPath>
       <itemPath>nrf24l01.h</itemPath>
+      <itemPath>dead_8khz_packed.h</itemPath>
+      <itemPath>laser_8khz_packed.h</itemPath>
+      <itemPath>pain_8khz_packed.h</itemPath>
+      <itemPath>ready_8khz_packed.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -47,7 +51,7 @@
         <targetDevice>PIC32MX250F128B</targetDevice>
         <targetHeader></targetHeader>
         <targetPluginBoard></targetPluginBoard>
-        <platformTool>PKOBSKDEPlatformTool</platformTool>
+        <platformTool>PICkit3PlatformTool</platformTool>
         <languageToolchain>XC32</languageToolchain>
         <languageToolchainVersion>1.40</languageToolchainVersion>
         <platform>3</platform>
@@ -249,7 +253,7 @@
         <C32Global>
         </C32Global>
       </item>
-      <item path="basestation.c" ex="false" overriding="false">
+      <item path="basestation.c" ex="true" overriding="false">
         <C32>
         </C32>
         <C32-AR>
@@ -277,7 +281,7 @@
         <C32Global>
         </C32Global>
       </item>
-      <item path="gun.c" ex="true" overriding="false">
+      <item path="gun.c" ex="false" overriding="false">
         <C32>
         </C32>
         <C32-AR>

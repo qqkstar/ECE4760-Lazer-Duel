@@ -312,7 +312,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 PT_YIELD_TIME_msec(5);
                 nrf_send_payload(&msg, 1);
                 PT_YIELD_TIME_msec(20);
-                //tft_fillScreen(ILI9340_BLACK);
+                tft_fillScreen(ILI9340_BLACK);
                 state = PLAY_STATE; // go to play state
             }
         }
@@ -343,7 +343,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
                 // reset flags
                 received = 0;
                 receive = 0;
-                tft_fillScreen(ILI9340_BLACK);
+                tft_fillRoundRect(0, 80, 250, 100, 1, ILI9340_BLACK);
                 displayScoreBoard(); // display updated health of players
             }
            
