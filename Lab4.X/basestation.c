@@ -306,7 +306,7 @@ static PT_THREAD(protothread_radio(struct pt *pt)) {
             nrf_pwrup();
             PT_YIELD_TIME_msec(2);
             nrf_rx_mode();
-            PT_YIELD_TIME_msec(2000);
+            PT_YIELD_TIME_msec(100);
             nrf_pwrdown();
             PT_YIELD_TIME_msec(2);
 
