@@ -67,7 +67,7 @@ static char receive;
 static char ticket;
 static char msg;
 static int joined = 0;
-static char id = 2;
+static char id = 1;
 static char idle = 1;
 
 char curr_id = 0;
@@ -348,8 +348,10 @@ void gunSetup() {
     //DmaChnSetEventControl(dmaChn, DMA_EV_START_IRQ(_TIMER_4_IRQ));
 
     ConfigINT0(EXT_INT_ENABLE | FALLING_EDGE_INT | EXT_INT_PRI_2);
+    mINT0ClearIntFlag();
     EnableINT0;
-
+    mINT0ClearIntFlag();
+    
     mPORTASetPinsDigitalIn(BIT_1);
     mPORTBSetPinsDigitalOut(SHOOT_LED | LIFE_LED); //Shoot and life LEDs
     mPORTBClearBits(SHOOT_LED);
@@ -422,8 +424,8 @@ static PT_THREAD(protothread_timer(struct pt *pt)) {
                     alive = 1;
                     PT_YIELD_TIME_msec(20);
                     // clear interrupt and emitter
-                    mINT0ClearIntFlag();
-                    EnableINT0;
+                    //mINT0ClearIntFlag();
+                    //EnableINT0;
                     CVRCON = 0;
                     PT_YIELD_TIME_msec(100);
                 } else { // if player is out of lives
@@ -564,11 +566,14 @@ void main(void) {
 // Interrupt for IR sensor
 
 void __ISR(_EXTERNAL_0_VECTOR, ipl2) INT0Interrupt() {
-    alive = 0;
-    lives = lives << 1;
-    life_cnt--;
-    DisableINT0;
+    if(alive){
+        alive = 0;
+        lives = lives << 1;
+        life_cnt--;
+    }
+    //DisableINT0;
     mINT0ClearIntFlag();
+    //delay_ms(100);
 
 }
 
